@@ -2,6 +2,7 @@
 // @requirements HLR-SRV-UI-010, HLR-SRV-UI-011
 // @environment display
 // @plan Run the assembled HTTP application against isolated persistent state and open its actual assets in Chromium, without API mocks. Set a password through the page, navigate six pages at 320 and 1920 pixels, save terminal call volume and confirm its persisted value, create an account, provoke an opening-revision conflict from a second client, and cancel the retained draft. Reload to check the accepted account and sign out to check the session boundary.
+// Save from a different terminal section. An invalid field in a collapsed section must reopen it before submission.
 // @pass The real service must persist accepted input, reject the stale edit, retain its visible draft, and fit both viewports without page-wide horizontal scrolling. This is browser integration evidence, not a physical touch-device test.
 
 'use strict';
@@ -60,13 +61,31 @@ test(
     }
     await page.setViewportSize({ width: 320, height: 740 });
     await page.goto(fixture.base + '/terminals');
+    await page.locator('.terminal-calls > summary').click();
+    const autoAnswer = page.getByRole('switch', { name: 'Auto-answer incoming calls' });
+    await autoAnswer.check();
+    await page.locator('input[name=countdown]').fill('1');
+    await page.locator('.terminal-general > summary').click();
+    await page.getByRole('button', { name: 'Save changes', exact: true }).click();
+    assert.equal(
+      await page.locator('.terminal-section[open]').getAttribute('data-section'),
+      'calls',
+    );
+    await page.locator('input[name=countdown]').fill('5');
+    await autoAnswer.uncheck();
+    await page.locator('.terminal-audio > summary').click();
     await page.getByRole('combobox', { name: /^Call volume/ }).selectOption('65');
     assert.equal(await page.locator('.terminal-save-state').innerText(), 'Unsaved settings');
+    await page.locator('.terminal-general > summary').click();
     await page.getByRole('combobox', { name: /^Language/ }).scrollIntoViewIfNeeded();
     await page.getByRole('button', { name: 'Save changes', exact: true }).click();
     await page.getByText('Saved terminal settings for term1.', { exact: true }).waitFor();
     assert.equal(new Store(fixture.directory).value.profiles.term1.c20_speaker_volume, 65);
     assert.equal(await page.locator('.terminal-save-state').innerText(), 'Settings saved');
+    assert.equal(
+      await page.locator('.terminal-section[open]').getAttribute('data-section'),
+      'general',
+    );
     await page.goto(fixture.base + '/accounts');
     await page.getByRole('button', { name: 'New account', exact: true }).click();
     await page.locator('#edit-name').fill('Browser fixture');

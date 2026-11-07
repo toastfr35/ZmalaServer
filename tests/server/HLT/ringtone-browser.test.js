@@ -1,7 +1,7 @@
 // @test S-HLT-035
 // @requirements HLR-SRV-CONFIG-015, HLR-SRV-UI-010, HLR-SRV-UI-011
 // @environment display
-// @plan Use the actual isolated server and Chromium to import a WAV through the file picker, verify normalized audio and saved selection, and play/pause its authenticated preview. Verify all 5-percent speaker-volume choices and preserve an unsaved volume change across import, check phone/desktop layout bounds, and verify navigation stops playback. Post real device peripheral reports, check live badges while edits remain unsaved, then age the browser clock to verify stale hardware status is unavailable. No API or media-control mocks.
+// @plan Use the actual isolated server and Chromium to import a WAV through the file picker, verify normalized audio and saved selection, and play/pause its authenticated preview. Verify all 5-percent speaker-volume choices and preserve an unsaved volume change across import, check phone/desktop layout bounds, and verify closing Audio or navigating stops playback. Post real device peripheral reports, check Device details while edits remain unsaved, then age the browser clock to verify stale hardware status is unavailable. No API or media-control mocks.
 // @pass Accepted imports and edits persist, preview decodes, navigation pauses it, both layouts fit and no page errors occur. This does not establish physical speaker audibility.
 'use strict';
 /* global document, innerWidth */
@@ -66,10 +66,19 @@ test(
     );
     assert.equal(await page.locator('#error').innerText(), '', errors.join('; '));
     await page.getByLabel('Select terminal', { exact: true }).selectOption('term1');
+    const details = page.locator('.terminal-device-details > summary');
+    const audioSection = page.locator('.terminal-audio > summary');
+    const detail = (label, value) =>
+      page
+        .locator('.terminal-status-group dl > div')
+        .filter({ has: page.getByText(label, { exact: true }) })
+        .getByText(value, { exact: true });
+    await detail('Remote battery', '75%').waitFor();
+    await detail('Remote charger', 'Connected').waitFor();
+    await detail('C10/C20', 'Connected').waitFor();
+    await audioSection.click();
     await page.locator('select[name="c20SpeakerVolume"]').selectOption('75');
-    await page.getByText('Remote battery: 75%', { exact: true }).waitFor();
-    await page.getByText('Remote charger: connected', { exact: true }).waitFor();
-    await page.getByText('C10/C20: connected', { exact: true }).waitFor();
+    await details.click();
     await report({
       ...hardware,
       remote_battery: 31,
@@ -78,9 +87,10 @@ test(
       camera_powered: false,
       camera_connected: false,
     });
-    await page.getByText('Remote battery: 31%', { exact: true }).waitFor();
-    await page.getByText('Remote charger: not connected', { exact: true }).waitFor();
-    await page.getByText('C10/C20: powered off', { exact: true }).waitFor();
+    await detail('Remote battery', '31%').waitFor();
+    await detail('Remote charger', 'Not connected').waitFor();
+    await detail('C10/C20', 'Powered off').waitFor();
+    await audioSection.click();
     assert.equal(await page.locator('select[name="c20SpeakerVolume"]').inputValue(), '75');
 
     assert.deepEqual(
@@ -113,9 +123,17 @@ test(
     });
     assert.equal(await audio.evaluate((element) => element.paused), false);
     const element = await audio.elementHandle();
+    await details.click();
+    await page.waitForFunction((element) => element.paused, element);
+    await audioSection.click();
+    await audio.evaluate((element) => element.play());
     await page.getByLabel('Select terminal', { exact: true }).selectOption('other');
     await page.waitForFunction((element) => element.paused, element);
     await page.getByLabel('Select terminal', { exact: true }).selectOption('term1');
+    assert.equal(
+      await page.locator('.terminal-section[open]').getAttribute('data-section'),
+      'audio',
+    );
     assert.equal(await page.getByLabel('Ringtone', { exact: true }).inputValue(), value);
     assert.equal(await page.locator('select[name="c20SpeakerVolume"]').inputValue(), '75');
     const saved = page.waitForResponse(
@@ -137,8 +155,9 @@ test(
       const now = Date.now();
       Date.now = () => now + 21000;
     });
-    await page.getByText('Remote: status unavailable', { exact: true }).waitFor();
-    await page.getByText('C10/C20: status unavailable', { exact: true }).waitFor();
+    await details.click();
+    await detail('Remote', 'Status unavailable').waitFor();
+    await detail('C10/C20', 'Status unavailable').waitFor();
     assert.deepEqual(errors, []);
   },
 );

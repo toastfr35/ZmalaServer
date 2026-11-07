@@ -47,7 +47,7 @@ async function performRefresh(force) {
     }
     authControls();
     const changed = state.renderedVersion !== state.model.configuration_version,
-      liveChanged = state.renderedLive !== liveSignature();
+      liveChanged = page !== '/terminals' && state.renderedLive !== liveSignature();
     // Account polls replace rows only; typing in the search field can continue.
     // Other pages replace the view, so retain any focused control until it blurs.
     const refreshRegion = document.getElementById(page === '/accounts' ? 'account-rows' : 'view');

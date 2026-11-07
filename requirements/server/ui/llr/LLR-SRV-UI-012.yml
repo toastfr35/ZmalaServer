@@ -17,6 +17,8 @@ references:
   type: file
 - path: zmala_server/web/admin-shared.js
   type: file
+- path: zmala_server/web/admin-theme.js
+  type: file
 - path: zmala_server/web/admin.css
   type: file
 - path: zmala_server/web/admin.html
@@ -24,6 +26,7 @@ references:
 reviewed: null
 scope: Core
 text: |
-  The dark English interface shall provide Overview, Accounts, Groups, Terminals, Callbacks and Activity pages. Recent events shall appear on Activity and ongoing calls on Overview.
+  The English interface shall provide Overview, Accounts, Groups, Terminals, Callbacks and Activity pages. Recent events shall appear on Activity and ongoing calls on Overview.
+  A keyboard-accessible moon and sun control at the bottom left shall switch between dark and light appearance. The selection shall persist across pages and reloads when local browser storage is available.
 verification: |
-  Navigate all pages with current fixture state and verify selected-page headings, ongoing calls and activity content.
+  Navigate all pages with current fixture state and verify selected-page headings, ongoing calls and activity content. Switch themes with the keyboard and verify the selected appearance and control location at phone and desktop widths.

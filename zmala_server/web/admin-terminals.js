@@ -3,7 +3,8 @@ import {
   terminalInput,
   terminalUser,
   buildCallFields,
-  buildMediaFields,
+  buildVideoFields,
+  buildAudioFields,
   buildGeneralFields,
 } from './admin-terminalfields.js';
 import { query } from './admin-shared.js';
@@ -69,67 +70,60 @@ function updateTerminalSaveState(card) {
       ? 'Unsaved settings'
       : 'Settings saved';
 }
+/** @param {HTMLElement} list @param {string} label @param {string} value */
+function terminalDetail(list, label, value) {
+  const row = el('div');
+  row.append(el('dt', label), el('dd', value));
+  list.append(row);
+}
 // @llr LLR-SRV-UI-017
 /** @param {HTMLElement} summary @param {import('../types/contracts').TerminalStatus | undefined} status @param {boolean} fresh */
 function appendTerminalHardware(summary, status, fresh) {
   if (!fresh) {
-    summary.append(
-      badge('Remote: status unavailable', 'neutral'),
-      badge('C10/C20: status unavailable', 'neutral'),
-    );
+    terminalDetail(summary, 'Remote', 'Status unavailable');
+    terminalDetail(summary, 'C10/C20', 'Status unavailable');
     return;
   }
   /** @type {Record<string, string>} */
   const remote = {
-    connected: 'connected',
-    disconnected: 'disconnected',
-    unpaired: 'not paired',
-    blocked: 'blocked',
+    connected: 'Connected',
+    disconnected: 'Disconnected',
+    unpaired: 'Not paired',
+    blocked: 'Blocked',
     bluetooth_unavailable: 'Bluetooth unavailable',
     input_unavailable: 'input unavailable',
   };
   /** @type {Record<string, string>} */
   const camera = {
-    connected: 'connected',
-    disconnected: 'disconnected',
-    off: 'powered off',
-    on: 'powered on (connection unknown)',
-    waking: 'waking',
-    switching: 'changing power',
-    error: 'power/recovery error',
+    connected: 'Connected',
+    disconnected: 'Disconnected',
+    off: 'Powered off',
+    on: 'Powered on (connection unknown)',
+    waking: 'Waking',
+    switching: 'Changing power',
+    error: 'Power/recovery error',
   };
   const battery = status?.remote_battery;
-  summary.append(
-    badge(
-      'Remote: ' + (remote[status?.remote_status || ''] || 'unknown'),
-      status?.remote_status === 'connected' ? 'success' : 'neutral',
-    ),
-    badge(
-      'Remote battery: ' + (typeof battery === 'number' ? battery + '%' : 'unknown'),
-      typeof battery === 'number' && battery > 20 ? 'success' : 'neutral',
-    ),
-    badge(
-      'Remote charger: ' +
-        (status?.remote_charger_connected === true
-          ? 'connected'
-          : status?.remote_charger_connected === false
-            ? 'not connected'
-            : 'unknown'),
-      'neutral',
-    ),
-    badge(
-      'C10/C20: ' + (camera[status?.camera_status || ''] || 'unknown'),
-      status?.camera_status === 'connected' ? 'success' : 'neutral',
-    ),
-    badge(
-      'C10/C20 power: ' +
-        (status?.camera_powered === true
-          ? 'on'
-          : status?.camera_powered === false
-            ? 'off'
-            : 'unknown'),
-      status?.camera_powered === true ? 'success' : 'neutral',
-    ),
+  terminalDetail(summary, 'Remote', remote[status?.remote_status || ''] || 'Unknown');
+  terminalDetail(
+    summary,
+    'Remote battery',
+    typeof battery === 'number' ? battery + '%' : 'Unknown',
+  );
+  terminalDetail(
+    summary,
+    'Remote charger',
+    status?.remote_charger_connected === true
+      ? 'Connected'
+      : status?.remote_charger_connected === false
+        ? 'Not connected'
+        : 'Unknown',
+  );
+  terminalDetail(summary, 'C10/C20', camera[status?.camera_status || ''] || 'Unknown');
+  terminalDetail(
+    summary,
+    'C10/C20 power',
+    status?.camera_powered === true ? 'On' : status?.camera_powered === false ? 'Off' : 'Unknown',
   );
 }
 /** @param {HTMLElement} connection
@@ -170,54 +164,55 @@ export function terminalCardState(card, id) {
   query(card, 'h2').textContent = u.name;
   query(card, '.terminal-address').textContent = `sip:${id}@${state.model.host}`;
   const summary = query(card, '.terminal-summary');
-  const connection = el('div', null, 'terminal-status-group');
-  const hardware = el('div', null, 'terminal-status-group');
-  const features = el('div', null, 'terminal-status-group');
-  connection.append(el('h3', 'Connection'));
-  hardware.append(el('h3', 'Remote & camera'));
-  features.append(el('h3', 'Call features'));
-  summary.replaceChildren(connection, hardware, features);
-  connection.append(
-    badge(online(id) ? 'Terminal online' : 'Terminal offline', online(id) ? 'success' : 'neutral'),
-    badge(
-      registered(id) ? 'SIP registered' : 'SIP offline',
-      registered(id) ? 'success' : 'neutral',
-    ),
+  const fresh = online(id);
+  const sipRegistered = registered(id);
+  const status = state.model.terminal_statuses[id];
+  const quick = query(card, '.terminal-quick-status');
+  quick.replaceChildren(
+    badge(fresh ? 'Terminal online' : 'Terminal offline', fresh ? 'success' : 'neutral'),
+    el('span', sipRegistered ? 'SIP registered' : 'SIP offline'),
   );
+  if (fresh && typeof status?.remote_battery === 'number')
+    quick.append(el('span', `Remote ${status.remote_battery}%`));
+  if (fresh && status?.camera_status === 'connected') quick.append(el('span', 'Camera connected'));
+  summary.replaceChildren();
+  /** @param {string} title */
+  function statusGroup(title) {
+    const group = el('div', null, 'terminal-status-group');
+    const rows = el('dl');
+    group.append(el('h3', title), rows);
+    summary.append(group);
+    return { group, rows };
+  }
+  const connection = statusGroup('Connection');
+  const hardware = statusGroup('Remote & camera');
+  const features = statusGroup('Call features');
+  terminalDetail(connection.rows, 'SIP', sipRegistered ? 'Registered' : 'Offline');
   if (id === state.model.local_terminal_id)
-    connection.append(badge('Server-local terminal', 'accent'));
-  const audioStatus = state.model.terminal_statuses[id];
-  appendTerminalUpdate(connection, audioStatus?.update);
-  appendTerminalHardware(hardware, audioStatus, online(id));
+    terminalDetail(connection.rows, 'Server', 'Local terminal');
+  appendTerminalUpdate(connection.group, status?.update);
+  appendTerminalHardware(hardware.rows, status, fresh);
   if (state.model.profiles[id].auto_framing === true) {
-    const framingStatus = audioStatus?.auto_framing_status;
+    const framingStatus = status?.auto_framing_status;
     /** @type {Record<string, string>} */
     const labels = {
-      active: 'Automatic framing active',
-      waiting: 'Automatic framing ready for a call',
-      unavailable: 'Automatic framing unavailable Ã‚Â· full view',
-      unsupported: 'Automatic framing requires a Pi C10/C20 terminal',
+      active: 'Active',
+      waiting: 'Ready for a call',
+      unavailable: 'Unavailable · full view',
+      unsupported: 'Requires a Pi C10/C20 terminal',
     };
-    features.append(
-      badge(
-        labels[framingStatus || ''] || 'Automatic framing pending',
-        framingStatus === 'active' ? 'accent' : 'neutral',
-      ),
-    );
+    terminalDetail(features.rows, 'Automatic framing', labels[framingStatus || ''] || 'Pending');
   }
   if (
     (state.model.profiles[id].audio_profile || 'normal') === 'speech' &&
-    audioStatus?.requested_audio_profile === 'speech'
+    status?.requested_audio_profile === 'speech'
   )
-    features.append(
-      badge(
-        audioStatus.audio_profile === 'speech'
-          ? 'Speech audio active'
-          : 'Speech unavailable Ã‚Â· normal audio',
-        audioStatus.audio_profile === 'speech' ? 'accent' : 'neutral',
-      ),
+    terminalDetail(
+      features.rows,
+      'Speech audio',
+      status.audio_profile === 'speech' ? 'Active' : 'Unavailable · normal audio',
     );
-  features.hidden = features.children.length === 1;
+  features.group.hidden = !features.rows.children.length;
   card
     .querySelectorAll('form')
     .forEach((form) =>
@@ -226,6 +221,16 @@ export function terminalCardState(card, id) {
         `${form.dataset.kind === 'association' ? 'Account association' : 'Terminal settings'} for ${id}`,
       ),
     );
+}
+/** @param {HTMLElement} card @param {string} key @param {string} title @param {string} description */
+function terminalSection(card, key, title, description) {
+  const section = el('details', null, 'terminal-section terminal-' + key);
+  const heading = el('summary');
+  heading.append(el('span', title), el('small', description));
+  section.append(heading);
+  section.dataset.section = key;
+  section.setAttribute('name', 'terminal-sections-' + terminalId(card));
+  return section;
 }
 /** @param {HTMLElement} card @param {string} id */
 function buildDevicesForm(card, id) {
@@ -242,51 +247,64 @@ function buildDevicesForm(card, id) {
   const save = el('button', 'Save changes', 'primary');
   save.type = 'submit';
   saveBar.append(saveState, save);
-  devices.append(saveBar);
   // Separate visual groups share one form and one save action.
-  /** @param {string} title @param {string} [className] */
-  const group = (title, className = '') => {
-    const section = el('section', null, 'terminal-setting-section ' + className);
+  /** @param {string} key @param {string} title @param {string} description */
+  const group = (key, title, description) => {
+    const section = terminalSection(card, key, title, description);
     const fields = el('div', null, 'terminal-options');
-    section.append(el('h3', title), fields);
+    section.append(fields);
     devices.append(section);
     return fields;
   };
-  buildCallFields(devices, group('Calls', 'terminal-calls'), id);
-  buildMediaFields(devices, group('Video & audio'), id);
-  buildGeneralFields(devices, group('General'), id);
-  const footer = el('div', null, 'terminal-tools');
-  const tools = el('div', null, 'button-row');
-  const setup = el('details', null, 'terminal-setup');
-  setup.append(el('summary', 'Setup', 'secondary'));
-  const menu = el('div', null, 'terminal-setup-menu');
-  /** @param {import('../types/admin').Action} action */
-  const setupAction = (action) => () => {
-    setup.open = false;
-    return action();
-  };
-  menu.append(
-    actionButton('Download Wi-Fi QR PDF', setupAction(openWifi), 'secondary', 'down'),
-    actionButton(
-      'Download server QR PDF',
-      setupAction(() => serverPdf(terminalId(card))),
-      'secondary',
-      'down',
-    ),
+  const user = terminalUser(id);
+  const profile = state.model.profiles[id];
+  const language = state.model.terminal_languages.find(
+    (entry) => entry.code === (profile.language || 'en'),
   );
-  setup.append(menu);
-  tools.append(
-    setup,
-    actionButton('Console', () => openConsole(terminalId(card)), 'secondary', 'terminal'),
-    actionButton(
-      'Developer access',
-      () => openDeveloperAccess(terminalId(card)),
-      'secondary',
-      'terminal',
-    ),
+  const ringtone = state.model.ringtone_choices.find((entry) => entry.id === profile.ringtone);
+  buildCallFields(
+    devices,
+    group('calls', 'Calls', user.auto_answer ? 'Auto-answer on' : 'Auto-answer off'),
+    id,
   );
-  footer.append(tools);
-  devices.append(footer);
+  buildVideoFields(
+    devices,
+    group(
+      'video',
+      'Video',
+      `${profile.video_resolution || '720p'} · ${profile.video_fps ?? 15} fps`,
+    ),
+    id,
+  );
+  buildAudioFields(
+    devices,
+    group(
+      'audio',
+      'Audio',
+      `${profile.audio_profile === 'speech' ? 'Speech' : 'Normal audio'} · ${ringtone?.name || 'Nokia'}`,
+    ),
+    id,
+  );
+  buildGeneralFields(
+    devices,
+    group(
+      'general',
+      'General',
+      `${language?.native || 'English'} · ${profile.carousel_portraits ?? 3} portraits`,
+    ),
+    id,
+  );
+  devices.append(saveBar);
+  // A user can save from a different section after editing a numeric field.
+  devices.addEventListener(
+    'invalid',
+    (event) => {
+      const section =
+        event.target instanceof HTMLElement && event.target.closest('.terminal-section');
+      if (section instanceof HTMLDetailsElement) section.open = true;
+    },
+    true,
+  );
   devices.onsubmit = (e) => {
     e.preventDefault();
     return submit(
@@ -325,6 +343,41 @@ function buildDevicesForm(card, id) {
     );
   };
   return devices;
+}
+/** @param {HTMLElement} card */
+function buildTerminalTools(card) {
+  const footer = el('details', null, 'terminal-tools');
+  const tools = el('div', null, 'button-row');
+  const setup = el('details', null, 'terminal-setup');
+  setup.append(el('summary', 'Setup', 'secondary'));
+  const menu = el('div', null, 'terminal-setup-menu');
+  /** @param {import('../types/admin').Action} action */
+  const setupAction = (action) => () => {
+    setup.open = false;
+    return action();
+  };
+  menu.append(
+    actionButton('Download Wi-Fi QR PDF', setupAction(openWifi), 'secondary', 'down'),
+    actionButton(
+      'Download server QR PDF',
+      setupAction(() => serverPdf(terminalId(card))),
+      'secondary',
+      'down',
+    ),
+  );
+  setup.append(menu);
+  tools.append(
+    setup,
+    actionButton('Console', () => openConsole(terminalId(card)), 'secondary', 'terminal'),
+    actionButton(
+      'Developer access',
+      () => openDeveloperAccess(terminalId(card)),
+      'secondary',
+      'terminal',
+    ),
+  );
+  footer.append(el('summary', 'Setup & maintenance'), tools);
+  return footer;
 }
 /** @param {HTMLElement} card @param {string} id */
 function buildAssociationForm(card, id) {
@@ -372,17 +425,28 @@ function buildAssociationForm(card, id) {
   };
   return form;
 }
-/** @param {string} id */
-export function buildTerminalCard(id) {
+/** @param {string} id @param {string} [openSection] */
+export function buildTerminalCard(id, openSection = 'device-details') {
   const u = state.model.users[id],
     card = panel(u.name, `sip:${id}@${state.model.host}`);
   card.classList.add('terminal-card');
   card.dataset.terminalId = id;
   query(card, '.panel-heading p').classList.add('terminal-address');
-  card.append(el('div', null, 'terminal-summary'));
-  const forms = el('div', null, 'terminal-fields');
-  forms.append(buildAssociationForm(card, id), buildDevicesForm(card, id));
-  card.append(forms);
+  const details = terminalSection(
+    card,
+    'device-details',
+    'Device details',
+    'Connection · hardware · account',
+  );
+  details.append(
+    el('div', null, 'terminal-summary'),
+    buildAssociationForm(card, id),
+    buildTerminalTools(card),
+  );
+  card.append(el('div', null, 'terminal-quick-status'), details, buildDevicesForm(card, id));
+  for (const section of card.querySelectorAll('details.terminal-section'))
+    if (section instanceof HTMLDetailsElement)
+      section.open = section.dataset.section === openSection;
   terminalCardState(card, id);
   return card;
 }
@@ -423,7 +487,10 @@ export function renderTerminals() {
   chooser.append(select);
   let card = state.terminalCards.get(state.terminalId);
   if (!card || card.dataset.dirty !== 'true') {
-    card = buildTerminalCard(state.terminalId);
+    const openSection = card
+      ?.querySelector('.terminal-section[open]')
+      ?.getAttribute('data-section');
+    card = buildTerminalCard(state.terminalId, card ? (openSection ?? '') : undefined);
     state.terminalCards.set(state.terminalId, card);
   }
   terminalCardState(card, state.terminalId);

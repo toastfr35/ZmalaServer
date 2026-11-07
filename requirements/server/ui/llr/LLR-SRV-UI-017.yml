@@ -32,7 +32,7 @@ references:
 reviewed: null
 scope: Core
 text: |
-  The Terminals page shall select one device card and separate association from settings changes. Settings shall appear under Calls, Video and audio, and General. Registered controls shall remain attached to the visible form.
+  The Terminals page shall select one device card and show expandable sections in the order Device details, Calls, Video, Audio and General. Device details shall open initially and group device status, account association and maintenance. Opening one section shall close the previously open section. Settings shall share a single form and retain drafts when switching sections. Account association shall submit separately.
   The device selector shall show the account name before its identifier. Connection,
   peripheral and call-feature status shall be visually grouped. A sticky save bar
   shall show whether the terminal settings have unsaved changes.
@@ -42,11 +42,11 @@ text: |
   The selected card shall show remote connection/input state, battery and charger,
   and C10/C20 connection/recovery state and confirmed power from the latest report.
   Missing values shall show unknown. After 20 seconds without a fresh terminal
-  report, peripheral badges shall show status unavailable rather than old healthy
-  readings. Polling shall update badges without discarding unsaved settings.
+  report, peripheral details shall show status unavailable rather than old healthy
+  readings. Polling shall update status without closing the open section or discarding unsaved settings.
 verification: |
-  Select different devices, inspect section controls and save association separately from profile settings. Enumerate volume choices,
+  Select different devices, inspect section order and controls, and save association separately from profile settings. Switch sections while a draft is dirty and verify saving from another section retains the values. Verify validation reopens a section with invalid input. Enumerate volume choices,
   open a between-step value and verify it is not saved until submission. Render
   fresh/unknown/stale peripheral reports and poll while a draft is dirty; verify
-  visible badges, stale suppression and unchanged draft values. Inspect account-first
+  visible diagnostics, stale suppression and unchanged draft values. Inspect account-first
   choices and draft status; scroll a long form and verify Save changes remains visible.

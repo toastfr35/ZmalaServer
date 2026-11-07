@@ -79,7 +79,12 @@ export function ringtoneField(form, id) {
       if (other !== audio) other.pause();
     });
     timer = setInterval(() => {
-      if (!audio.isConnected || audio.offsetParent === null || audio.currentTime >= 10) {
+      if (
+        !audio.isConnected ||
+        audio.offsetParent === null ||
+        audio.closest('details.terminal-section:not([open])') ||
+        audio.currentTime >= 10
+      ) {
         audio.pause();
         audio.currentTime = 0;
       }
