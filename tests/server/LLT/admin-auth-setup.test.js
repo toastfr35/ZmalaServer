@@ -154,6 +154,12 @@ test('server PDF uses an encoded identity and revokes its private URL after down
   assert.equal(f.revoked.length, 0);
   f.timers[0].action();
   assert.deepEqual(f.revoked, ['blob:private']);
+  await f.serverPdf('room/1', true);
+  assert.equal(f.requests[1].url, '/api/setup/server.pdf?id=room%2F1&format=compact');
+  assert.equal(
+    f.elements.filter((node) => node.tag === 'a').at(-1).download,
+    'zmalacall-server-room/1-compact.pdf',
+  );
   for (const error of ['Permission denied', '']) {
     f.response = { ok: false, json: async () => ({ error }) };
     await assert.rejects(f.downloadPdf('/private', 'x.pdf'), {

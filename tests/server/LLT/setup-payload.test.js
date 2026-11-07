@@ -5,14 +5,49 @@
 // Inspect Wi-Fi and Terminal sheets for one A5 face on landscape A4, full-width QR geometry, four-module quiet borders, logo, minimal text and no printed credentials.
 // Render both foldable sheets to verify the frame surrounds the A5 content and stays clear of the QR quiet zone.
 // App sheets retain two distinct QR payloads and portrait A4 instructions. Long labels/URLs must not create extra pages.
+// Compare compact Base45 output with the Terminal's enrollment vectors and check its module count at level M.
 // @pass All payload fields, validation cases and PDF structure assertions must pass; physical print readability remains a system check.
 
 'use strict';
 const test = require('node:test'),
   assert = require('node:assert/strict');
-const { wifiPayload, serverPayload, setupPdf } = require('../../../zmala_server/setup-pdf');
+const {
+  wifiPayload,
+  serverPayload,
+  compactServerPayload,
+  setupPdf,
+} = require('../../../zmala_server/setup-pdf');
 const { inflateSync } = require('node:zlib');
 const QRCode = require('../../../zmala_server/node_modules/qrcode');
+
+test('compact server QR matches the Terminal enrollment vectors', () => {
+  const enrollment = {
+    server_url: 'https://server.example',
+    device_id: 'ZM-5f048e65-c296-4055-9f17-f5047da4cbd8',
+    device_token: 'wvGDNTSbWniil5TTG7VGNlX9',
+  };
+  const compact = compactServerPayload(enrollment);
+  assert.equal(
+    compact,
+    'ZMS1:$*09$15$CO/EPJEB$CBECP9EV C-P0+%CY:I4$AD13OP0M$K5IR.NUUW6ZSJCBFE7J/UQB-M4*6S5',
+  );
+  assert.equal(QRCode.create(compact, { errorCorrectionLevel: 'M' }).modules.size, 33);
+  assert.equal(
+    QRCode.create(serverPayload(enrollment), { errorCorrectionLevel: 'M' }).modules.size,
+    53,
+  );
+  assert.equal(
+    compactServerPayload({
+      server_url: 'http://[::1]:8080/',
+      device_id: 'legacy_01',
+      device_token: 'x'.repeat(21),
+    }),
+    'ZMS1:000-D1BG7$A69G7E46C36TVD53D+PCN1CJB6FAFFAFFAFFAFFAFFAFFAFFAFFAFFAF',
+  );
+  assert.throws(() =>
+    compactServerPayload({ ...enrollment, server_url: 'https://server.example/private' }),
+  );
+});
 
 test('foldable sheets show only branding, scan prompt and privacy note', async (t) => {
   const PDFDocument = require('node:module').createRequire(

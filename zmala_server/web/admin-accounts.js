@@ -393,6 +393,15 @@ export function renderConnection() {
     container.append(actions);
   }
   container.append(actionButton('Download server QR PDF', () => serverPdf(id), 'primary', 'down'));
+  if (u.type === 'terminal')
+    container.append(
+      actionButton(
+        'Download compact server QR PDF',
+        () => serverPdf(id, true),
+        'secondary',
+        'down',
+      ),
+    );
 }
 /** @param {string} id */
 export function openConnection(id) {

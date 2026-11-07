@@ -273,6 +273,12 @@ function buildDevicesForm(card, id) {
       'secondary',
       'down',
     ),
+    actionButton(
+      'Download compact server QR PDF',
+      setupAction(() => serverPdf(terminalId(card), true)),
+      'secondary',
+      'down',
+    ),
   );
   setup.append(menu);
   tools.append(

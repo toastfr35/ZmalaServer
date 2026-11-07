@@ -20,6 +20,6 @@ references:
 reviewed: null
 scope: Core
 text: |
-  A server code shall encode type family-call-server and version 1, plus the selected enrolled terminal or app account's reachable server URL, device serial and device token. App codes shall identify the app account type. Unknown or unenrolled account selections shall be rejected.
+  The default server code shall encode type family-call-server and version 1, plus the selected enrolled terminal or app account's reachable server URL, device serial and device token. An opt-in compact Terminal PDF shall encode the same Terminal credentials as a ZMS1 Base45 payload at error correction M, using raw bytes for canonical UUIDs and Base64URL tokens. App codes shall identify the app account type. Unknown or unenrolled account selections shall be rejected.
 verification: |
-  Decode terminal and app codes and compare their identity, credentials and app account type. Verify setup routes require an enrolled account.
+  Decode terminal and app codes and compare their identity, credentials and app account type. Verify compact enrollment vectors and level M geometry, administrator access, and rejection of compact downloads for App accounts.
