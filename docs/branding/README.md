@@ -16,6 +16,9 @@ Preview.png compares all six versions. Android-mask-preview.png shows the dark a
 
 ## Recommended use
 
+The Overview banner uses the transparent A1 mark shared with ZmalaTerminal
+(`1fcd592`). Its alpha channel lets the banner gradient show through.
+
 Use A1 for the website, terminal, administration and documents. Choose the light or dark version to match its surroundings.
 Use A3 on a consistent dark navy background for the phone app. It keeps the purple/green mark readable on both light and dark home screens. The light app version is supplied for comparison.
 App exports have no wordmark or pre-rounded outer corners and include padding for launcher masks. These are artwork exports, not an installed Android adaptive-icon resource set.

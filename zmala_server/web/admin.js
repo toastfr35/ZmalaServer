@@ -2711,7 +2711,7 @@ function renderOverview() {
     intro = el('div');
   intro.append(el('h2', 'Keep your family connected.'));
   const productLogo = el('img', null, 'welcome-logo');
-  productLogo.src = '/zmala-icon.svg';
+  productLogo.src = '/zmala-mark-transparent.png';
   productLogo.alt = '';
   hero.append(intro, productLogo);
   const stats = el('div', null, 'stats-grid'),
