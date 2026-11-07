@@ -1,7 +1,6 @@
 # ZmalaServer engineering
 
-Read the [technical guide](server.md) and [migration inventory](migration/path-map.csv).
-The source commit and copied inputs are recorded in [provenance.json](migration/provenance.json).
+Read the [technical guide](server.md).
 
 ## Requirements and tests
 
