@@ -24,11 +24,11 @@ export async function downloadPdf(route, filename, value) {
     'PDF downloaded. Print at actual size, then scan it with the assigned terminal or Zmala Phone app.',
   );
 }
-/** @param {string} id @param {boolean} [compact] */
-export function serverPdf(id, compact = false) {
+/** @param {string} id */
+export function serverPdf(id) {
   return downloadPdf(
-    '/api/setup/server.pdf?id=' + encodeURIComponent(id) + (compact ? '&format=compact' : ''),
-    `zmalacall-server-${id}${compact ? '-compact' : ''}.pdf`,
+    '/api/setup/server.pdf?id=' + encodeURIComponent(id),
+    `zmalacall-server-${id}.pdf`,
   );
 }
 export function openWifi() {

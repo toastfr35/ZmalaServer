@@ -559,11 +559,11 @@ async function downloadPdf(route, filename, value) {
     'PDF downloaded. Print at actual size, then scan it with the assigned terminal or Zmala Phone app.',
   );
 }
-/** @param {string} id @param {boolean} [compact] */
-function serverPdf(id, compact = false) {
+/** @param {string} id */
+function serverPdf(id) {
   return downloadPdf(
-    '/api/setup/server.pdf?id=' + encodeURIComponent(id) + (compact ? '&format=compact' : ''),
-    `zmalacall-server-${id}${compact ? '-compact' : ''}.pdf`,
+    '/api/setup/server.pdf?id=' + encodeURIComponent(id),
+    `zmalacall-server-${id}.pdf`,
   );
 }
 function openWifi() {
@@ -1008,15 +1008,6 @@ function renderConnection() {
     container.append(actions);
   }
   container.append(actionButton('Download server QR PDF', () => serverPdf(id), 'primary', 'down'));
-  if (u.type === 'terminal')
-    container.append(
-      actionButton(
-        'Download compact server QR PDF',
-        () => serverPdf(id, true),
-        'secondary',
-        'down',
-      ),
-    );
 }
 /** @param {string} id */
 function openConnection(id) {
@@ -2008,12 +1999,6 @@ function buildDevicesForm(card, id) {
     actionButton(
       'Download server QR PDF',
       setupAction(() => serverPdf(terminalId(card))),
-      'secondary',
-      'down',
-    ),
-    actionButton(
-      'Download compact server QR PDF',
-      setupAction(() => serverPdf(terminalId(card), true)),
       'secondary',
       'down',
     ),

@@ -146,6 +146,7 @@ function fixture() {
         return {
           wifiPayload: fn('wifiPayload', 'wifi'),
           serverPayload: fn('serverPayload', 'server'),
+          compactServerPayload: fn('compactServerPayload', 'ZMS1:fixture'),
           setupPdf: fn('setupPdf', Buffer.from('%PDF')),
         };
       if (name === '../server-ssh')
@@ -401,6 +402,7 @@ test('setup downloads pass intended terminal payload and SSH routes delegate con
   assert.equal(res.headers['Content-Type'], 'application/pdf');
   assert.match(res.headers['Content-Disposition'], /term2/);
   assert.equal(f.calls.find((c) => c[0] === 'setupPdf')[1].label, 'Second (term2)');
+  assert.equal(f.calls.find((c) => c[0] === 'setupPdf')[1].payload, 'ZMS1:fixture');
   const rejected = fixture();
   rejected.context.store.enrolledAccount = () => null;
   await assert.rejects(
