@@ -1,0 +1,25 @@
+active: true
+area: Terminal enrollment
+derived: false
+header: |
+  Versioned server identity code
+level: 44.0
+links:
+- HLR-SRV-ENROLL-001: cpzuLhH7MHX-iuf3i1mTr-w9N3rLjLjyJn8enBf5ack=
+normative: true
+ref: ''
+references:
+- path: tests/server/LLT/admin-routing.test.js
+  type: file
+- path: tests/server/LLT/setup-payload.test.js
+  type: file
+- path: zmala_server/http/admin-routes.js
+  type: file
+- path: zmala_server/setup-pdf.js
+  type: file
+reviewed: null
+scope: Core
+text: |
+  A server code shall encode type family-call-server and version 1, plus the selected enrolled terminal or app account's reachable server URL, device serial and device token. App codes shall identify the app account type. Unknown or unenrolled account selections shall be rejected.
+verification: |
+  Decode terminal and app codes and compare their identity, credentials and app account type. Verify setup routes require an enrolled account.

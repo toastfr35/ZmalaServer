@@ -1,0 +1,207 @@
+// @ts-check
+'use strict';
+// Device API routes use the bearer token identity, not a terminal ID supplied by the request.
+const { callPhotoRoute } = require('../call-photo');
+const developerAccess = require('../developer-access');
+const { terminalStatus } = require('../terminal-status');
+const { updateStatus } = require('../terminal-updates');
+const { contactPresence } = require('../registrations');
+const { send, readJson, requireDevice, httpError } = require('./responses');
+// @llr LLR-SRV-CONFIG-022
+/** Full snapshots after reads and writes must expose the same live fields.
+ * @param {string} id @param {import('../types/http').DeviceContext} context */
+async function liveConfiguration(id, { store, sipServer, callbacks }) {
+  const config = store.config(id);
+  config.contacts = config.contacts.map((contact) => ({
+    ...contact,
+    ...contactPresence(sipServer, contact.id),
+  }));
+  config.callbacks = callbacks.list(id);
+  // @llr LLR-SRV-HOST-007
+  config.developer_access = store.secureCalls
+    ? await developerAccess.control('config', {
+        terminal_id: id,
+        device_id: config.device_id,
+      })
+    : null;
+  return config;
+}
+
+/** Identity comes exclusively from the bearer token, never from a requested terminal ID.
+ * @param {import('node:http').IncomingMessage} req
+ * @param {import('node:http').ServerResponse} res @param {URL} url
+ * @param {import('../types/http').DeviceContext} context */
+async function deviceRoutes(req, res, url, context) {
+  if (await callPhotoRoute(req, res, url, context)) return true;
+  const { store, sipServer, callbacks, consoleJobs, terminalStatuses } = context;
+  let { deviceId } = context;
+  // @llr LLR-SRV-MAINT-022
+  if (url.pathname.startsWith('/api/terminal-updates/')) {
+    deviceId = requireDevice(deviceId);
+    if (!store.terminalAccount(deviceId)) throw httpError(403, 'A terminal account is required.');
+    if (url.pathname === '/api/terminal-updates/manifest' && req.method === 'GET') {
+      if (!context.terminalUpdates) throw httpError(503, 'Update feed unavailable.');
+      return send(res, 200, { manifest: await context.terminalUpdates.manifest() });
+    }
+    if (url.pathname === '/api/terminal-updates/status' && req.method === 'POST') {
+      const update = updateStatus(await readJson(req, 4096));
+      terminalStatuses[deviceId] = { ...terminalStatuses[deviceId], update };
+      return send(res, 200, { ok: true });
+    }
+  }
+  // @llr LLR-SRV-CALLBACK-016, LLR-SRV-APP-003
+  const appCallback = url.pathname.match(/^\/api\/app\/callbacks\/([a-f0-9-]{36})$/);
+  if (appCallback && req.method === 'DELETE') {
+    const id = requireDevice(deviceId);
+    if (store.enrolledAccount(id)?.type !== 'app')
+      throw httpError(403, 'An app account is required.');
+    callbacks.cancel(appCallback[1], id);
+    await callbacks.flush();
+    return send(res, 200, { ok: true });
+  }
+  // @llr LLR-SRV-CALLBACK-015, LLR-SRV-APP-003
+  if (url.pathname === '/api/app/callbacks' && req.method === 'POST') {
+    const id = requireDevice(deviceId);
+    if (store.enrolledAccount(id)?.type !== 'app')
+      throw httpError(403, 'An app account is required.');
+    const update = await readJson(req, 4096);
+    if (Object.keys(update).some((key) => key !== 'to'))
+      throw httpError(400, 'Send only the recipient.');
+    const callback = callbacks.create(id, update.to);
+    await callbacks.flush();
+    return send(res, 200, { callback });
+  }
+  // @llr LLR-SRV-APP-005
+  if (['/api/app/push', '/api/app/call/decline'].includes(url.pathname) && req.method === 'POST') {
+    const id = requireDevice(deviceId);
+    if (store.enrolledAccount(id)?.type !== 'app')
+      throw httpError(403, 'An app account is required.');
+    if (!sipServer.appCalls) throw httpError(503, 'Push calling is unavailable.');
+    const update = await readJson(req, 8192);
+    if (url.pathname === '/api/app/push') {
+      sipServer.appCalls.push.register(id, update.token);
+      // @llr LLR-SRV-CALLBACK-025
+      callbacks.deliver(id);
+    } else sipServer.appCalls.decline(id, update.call_id);
+    return send(res, 200, { ok: true, push_enabled: sipServer.appCalls.push.sender.enabled });
+  }
+  // @llr LLR-SRV-APP-003
+  if (url.pathname === '/api/app/config' && req.method === 'GET') {
+    const id = requireDevice(deviceId);
+    if (store.enrolledAccount(id)?.type !== 'app')
+      throw httpError(403, 'An app account is required.');
+    const config = store.appConfig(id);
+    config.contacts = config.contacts.map((contact) => ({
+      ...contact,
+      ...contactPresence(sipServer, contact.id),
+    }));
+    return send(res, 200, {
+      ...config,
+      callbacks: callbacks.list(id),
+      callbacks_enabled: true,
+      push_enabled: !!sipServer.appCalls?.push.sender.enabled,
+    });
+  }
+  if (
+    deviceId &&
+    store.enrolledAccount(deviceId)?.type === 'app' &&
+    url.pathname.startsWith('/api/') &&
+    !url.pathname.startsWith('/api/contacts/')
+  ) {
+    throw httpError(403, 'This API is not available to app accounts.');
+  }
+  if (url.pathname === '/api/config' && req.method === 'GET') {
+    deviceId = requireDevice(deviceId);
+    if (
+      // @llr LLR-SRV-PRESENCE-005
+      !store.secureCalls &&
+      url.searchParams.get('delta') === '1' &&
+      url.searchParams.get('version') === String(store.value.configuration_version)
+    )
+      return send(res, 200, {
+        configuration_version: store.value.configuration_version,
+        live: {
+          contacts: store.contacts(deviceId).map(({ id }) => ({
+            id,
+            ...contactPresence(sipServer, id),
+          })),
+          callbacks: callbacks.list(deviceId),
+          developer_access: null,
+        },
+      });
+    return send(res, 200, await liveConfiguration(deviceId, context));
+  }
+  if (url.pathname === '/api/device/settings' && req.method === 'POST') {
+    deviceId = requireDevice(deviceId);
+    const update = await readJson(req, 4096);
+    if (
+      Object.keys(update).some((key) => !['settings', 'expected'].includes(key)) ||
+      !update.settings ||
+      typeof update.settings !== 'object' ||
+      Array.isArray(update.settings) ||
+      !update.expected ||
+      typeof update.expected !== 'object' ||
+      Array.isArray(update.expected)
+    )
+      throw Error('Send settings and their previous values.');
+    store.setDeviceSettings(
+      deviceId,
+      /** @type {Record<string, unknown>} */ (update.settings),
+      /** @type {Record<string, unknown>} */ (update.expected),
+    );
+    await store.flush();
+    return send(res, 200, await liveConfiguration(deviceId, context));
+  }
+  if (url.pathname === '/api/callbacks' && req.method === 'POST') {
+    deviceId = requireDevice(deviceId);
+    const update = await readJson(req, 4096);
+    const callback = callbacks.create(deviceId, update.to);
+    await callbacks.flush();
+    return send(res, 201, callback);
+  }
+  const callbackCancel = url.pathname.match(/^\/api\/callbacks\/([a-f0-9-]{36})\/cancel$/);
+  if (callbackCancel && req.method === 'POST') {
+    deviceId = requireDevice(deviceId);
+    callbacks.cancel(callbackCancel[1], deviceId);
+    await callbacks.flush();
+    return send(res, 200, { ok: true });
+  }
+  const presencePath = url.pathname.match(
+    /^\/api\/contacts\/([a-z][a-z0-9_-]{0,30})\/availability$/,
+  );
+  if (presencePath && req.method === 'GET') {
+    deviceId = requireDevice(deviceId);
+    const id = presencePath[1],
+      allowed = store.permitted(deviceId, id);
+    return send(res, 200, {
+      id,
+      ...(allowed ? contactPresence(sipServer, id) : { online: false, presence: 'offline' }),
+      can_call: allowed,
+      ring_timeout: allowed ? store.ringTimeout(id) : 60,
+    });
+  }
+  if (url.pathname === '/api/status' && req.method === 'POST') {
+    deviceId = requireDevice(deviceId);
+    const update = await readJson(req, 32000);
+    const previousUpdate = terminalStatuses[deviceId]?.update;
+    terminalStatuses[deviceId] = terminalStatus(update);
+    if (previousUpdate) terminalStatuses[deviceId].update = previousUpdate;
+    return send(res, 200, { ok: true });
+  }
+  if (url.pathname === '/api/console/next' && req.method === 'POST') {
+    deviceId = requireDevice(deviceId);
+    const job = consoleJobs.claim(deviceId);
+    await consoleJobs.flush();
+    return send(res, 200, { job });
+  }
+  const resultPath = url.pathname.match(/^\/api\/console\/result\/([a-f0-9-]{36})$/);
+  if (resultPath && req.method === 'POST') {
+    deviceId = requireDevice(deviceId);
+    // JSON escaping can use six bytes per retained output byte (e.g. NUL).
+    const result = consoleJobs.finish(deviceId, resultPath[1], await readJson(req, 400000));
+    await consoleJobs.flush();
+    return send(res, 200, result);
+  }
+  return false;
+}
+module.exports = { deviceRoutes };

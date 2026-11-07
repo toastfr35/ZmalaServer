@@ -1,0 +1,141 @@
+// @ts-check
+'use strict';
+// Validate untrusted configuration fields before they reach persistent state or derived API responses.
+/** @param {object} object @param {PropertyKey} key */
+const own = (object, key) => Object.hasOwn(object, key);
+// @llr LLR-SRV-DIR-021
+// Account IDs also become SIP usernames and object keys. Keep the allowlist and
+// prototype-name exclusion shared by creation, rename and backup admission.
+/** @param {unknown} id @returns {id is string} */
+const accountId = (id) =>
+  typeof id === 'string' &&
+  /^[a-z][a-z0-9_-]{0,30}$/.test(id) &&
+  !['constructor', 'prototype', '__proto__'].includes(id);
+// @llr LLR-SRV-DIR-029
+/** @param {import('./types/contracts').JsonObject} update
+ * @param {import('./types/contracts').ServerState['users']} users
+ * @returns {import('./types/contracts').Group} */
+function validateGroup(update, users) {
+  if (!update || typeof update.name !== 'string' || !update.name.trim() || update.name.length > 80)
+    throw Error('Enter a group name (1–80 characters).');
+  if (
+    update.description !== undefined &&
+    (typeof update.description !== 'string' || update.description.length > 240)
+  )
+    throw Error('Group descriptions must be at most 240 characters.');
+  if (
+    !Array.isArray(update.members) ||
+    update.members.length > 40 ||
+    update.members.some((id) => typeof id !== 'string' || !own(users, id)) ||
+    new Set(update.members).size !== update.members.length
+  )
+    throw Error('Select unique, existing accounts as group members.');
+  return {
+    name: update.name.trim(),
+    description: (update.description || '').trim(),
+    members: [...update.members],
+  };
+}
+// @llr LLR-SRV-DIR-022
+/** Stored portraits are local content paths, never arbitrary URLs or filenames.
+ * @param {unknown} photo @returns {photo is string} */
+function validPhoto(photo) {
+  return (
+    typeof photo === 'string' && (!photo || /^\/photos\/[a-f0-9]+\.(png|jpg|gif)$/.test(photo))
+  );
+}
+// @llr LLR-SRV-DIR-022
+/** Construct a validated patch before AccountStore mutates state. Omitted
+ * optional fields retain their existing values; an explicit invalid value fails
+ * the entire edit. Blank passwords are handled by AccountStore as "keep/generate".
+ * @param {import('./types/contracts').JsonObject} update
+ * @returns {import('./types/contracts').AccountFields} */
+function accountFields(update) {
+  if (typeof update.name !== 'string' || !update.name.trim() || update.name.length > 80)
+    throw Error('Enter an account name (1–80 characters).');
+  if (update.type !== 'app' && update.type !== 'terminal')
+    throw Error('Account type must be App or Terminal.');
+  if (
+    update.password !== undefined &&
+    (typeof update.password !== 'string' ||
+      update.password.length > 128 ||
+      /[\r\n\0]/.test(update.password))
+  )
+    throw Error('Invalid password (at most 128 characters).');
+  /** @type {import('./types/contracts').AccountFields} */
+  const fields = { name: update.name.trim(), type: update.type };
+  if (update.emails !== undefined) fields.emails = validateEmails(update.emails);
+  if (update.photo !== undefined) {
+    if (!validPhoto(update.photo)) throw Error('Invalid account picture.');
+    fields.photo = update.photo;
+  }
+  if (
+    update.type === 'app' &&
+    (update.auto_answer !== undefined || update.auto_answer_seconds !== undefined)
+  )
+    throw Error('Auto-answer is available for terminal accounts only.');
+  return Object.assign(fields, autoAnswerFields(update));
+}
+// @llr LLR-SRV-CONFIG-019
+/** Shared validation keeps terminal settings and legacy account API consistent.
+ * @param {import('./types/contracts').JsonObject} update
+ * @returns {import('./types/contracts').AutoAnswerSettings} */
+function autoAnswerFields(update) {
+  /** @type {import('./types/contracts').AutoAnswerSettings} */
+  const fields = {};
+  if (update.auto_answer !== undefined) {
+    if (typeof update.auto_answer !== 'boolean') throw Error('Auto-answer must be true or false.');
+    fields.auto_answer = update.auto_answer;
+  }
+  if (update.auto_answer_seconds !== undefined) {
+    if (
+      typeof update.auto_answer_seconds !== 'number' ||
+      !Number.isInteger(update.auto_answer_seconds) ||
+      update.auto_answer_seconds < 5 ||
+      update.auto_answer_seconds > 600
+    )
+      throw Error('Countdown must be 5–600 seconds.');
+    fields.auto_answer_seconds = update.auto_answer_seconds;
+  }
+  return fields;
+}
+// @llr LLR-SRV-DIR-023
+/** Accept plain mailbox addresses only; never SMTP headers or display-name syntax.
+ * @param {unknown} values @returns {string[]} */
+function validateEmails(values) {
+  if (!Array.isArray(values) || values.length < 1 || values.length > 10)
+    throw Error('Enter between one and ten email addresses.');
+  const emails = values.map((value) => {
+    if (typeof value !== 'string') throw Error('Enter valid email addresses.');
+    const address = value.trim();
+    const [local, domain, extra] = address.split('@');
+    if (
+      !local ||
+      !domain ||
+      extra !== undefined ||
+      address.length > 254 ||
+      local.length > 64 ||
+      !/^[A-Za-z0-9!#$%&'*+/=?^_`{|}~.-]+$/.test(local) ||
+      local.startsWith('.') ||
+      local.endsWith('.') ||
+      local.includes('..') ||
+      !domain.includes('.') ||
+      domain
+        .split('.')
+        .some((label) => !/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$/.test(label))
+    )
+      throw Error('Enter valid email addresses, without names or brackets.');
+    return local + '@' + domain.toLowerCase();
+  });
+  if (new Set(emails.map((address) => address.toLowerCase())).size !== emails.length)
+    throw Error('Each email address must be unique within the account.');
+  return emails;
+}
+module.exports = {
+  own,
+  accountId,
+  validateGroup,
+  accountFields,
+  autoAnswerFields,
+  validateEmails,
+};
