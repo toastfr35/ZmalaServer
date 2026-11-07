@@ -1,0 +1,23 @@
+active: true
+area: Terminal enrollment
+derived: false
+header: |
+  Printable setup document
+level: 42.0
+links:
+- HLR-SRV-ENROLL-001: cpzuLhH7MHX-iuf3i1mTr-w9N3rLjLjyJn8enBf5ack=
+normative: true
+ref: ''
+references:
+- path: tests/server/LLT/setup-payload.test.js
+  type: file
+- path: zmala_server/http/admin-routes.js
+  type: file
+- path: zmala_server/setup-pdf.js
+  type: file
+reviewed: null
+scope: Core
+text: |
+  Authenticated setup downloads shall produce one-page A4 PDFs with black-on-white QR codes and four-module white borders. English instructions shall identify the corresponding terminal or app scan step and warn that the page contains private access data. Terminal account sheets shall contain exactly one private server setup QR and explain how to share the connected Wi-Fi network from an Android phone to the terminal camera, with Ethernet as an alternative. App sheets shall contain exactly two distinct QR codes: a stable ZmalaPhone APK download URL and the private account setup payload. They shall also provide a clickable APK download URL, concise on-phone installation and permission instructions, and explain scanning from another screen or paper. Numbered steps and high-contrast text shall remain understandable when printed in grayscale.
+verification: |
+  Generate terminal, Wi-Fi and app PDFs, inspect page size, QR count, payloads and geometry, capture instruction text and verify payload decoding and the App APK link annotation and installation text.

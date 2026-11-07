@@ -1,0 +1,20 @@
+{
+  "SRV": {
+    "APP": "Android app accounts and enrollment",
+    "AUTH": "Administration and access control",
+    "BACKUP": "Backup and restore",
+    "CALL": "Call control",
+    "CALLBACK": "Callback requests and reminders",
+    "CONFIG": "Terminal configuration",
+    "DATA": "Saved state",
+    "DIR": "Accounts, groups and portraits",
+    "ENROLL": "Terminal enrollment",
+    "HOST": "Host access and storage",
+    "MAINT": "Maintenance and diagnostics",
+    "MEDIA": "Audio and video relay",
+    "MESSAGE": "Phone text notifications",
+    "PRESENCE": "Registration and availability",
+    "START": "Startup and shutdown",
+    "UI": "Administration interface"
+  }
+}
