@@ -3,6 +3,7 @@
 // @environment portable
 // @plan Generate setup payloads and PDF bytes directly; reject invalid Wi-Fi input and decode compact UTF-8 identity.
 // Inspect Wi-Fi and Terminal sheets for one A5 face on landscape A4, full-width QR geometry, four-module quiet borders, logo, minimal text and no printed credentials.
+// Render both foldable sheets to verify the frame surrounds the A5 content and stays clear of the QR quiet zone.
 // App sheets retain two distinct QR payloads and portrait A4 instructions. Long labels/URLs must not create extra pages.
 // @pass All payload fields, validation cases and PDF structure assertions must pass; physical print readability remains a system check.
 
