@@ -48,6 +48,8 @@ jobs:
       - run: npm ci --ignore-scripts && npm --prefix zmala_server ci --ignore-scripts
       - run: npx playwright install --with-deps chromium
       - run: make lint test-llt test-hlt test-adhoc package
+      - name: Wired SSH policy in isolated Linux namespaces
+        run: sudo "$(command -v python)" -m unittest tests.server.HLT.test_ssh_guard_linux -v
       - uses: actions/upload-artifact@v4
         with:
           name: server-package

@@ -1,4 +1,5 @@
 """Build a credential-free server release; migration data travels separately."""
+import argparse
 import hashlib
 import io
 import json
@@ -49,4 +50,6 @@ def package(destination=None):
 
 
 if __name__ == '__main__':
-    print(package())
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--output', type=Path)
+    print(package(parser.parse_args().output))
