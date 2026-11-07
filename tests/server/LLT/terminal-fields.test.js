@@ -1,7 +1,7 @@
 // @test S-LLT-010
 // @requirements LLR-SRV-UI-016, LLR-SRV-UI-017, LLR-SRV-UI-019, LLR-SRV-CONFIG-025
 // @environment portable
-// @plan Render terminal field definitions with DOM/API doubles; assert controls attach to the intended sections, frame-rate choices and all 5-percent speaker-volume choices are present, existing between-step levels show the nearest choice without changing the model and drafts/download errors retain ownership. Render peripheral badges for fresh, stale, legacy/unknown, connected, charging, zero-battery and powered-off reports.
+// @plan Render terminal field definitions with DOM/API doubles; assert controls attach to the intended sections, frame-rate choices and all 5-percent speaker-volume choices are present, existing between-step levels show the nearest choice without changing the model and drafts/download errors retain ownership. Render peripheral details for fresh, stale, legacy/unknown, connected, charging, zero-battery and powered-off reports.
 // @pass All named assertion cases must pass; skips and visual/hardware checks are recorded separately.
 
 'use strict';
@@ -65,11 +65,17 @@ test('every terminal setting is attached to its visible section, including frame
   vm.runInNewContext(source, context);
   const form = { fields: {} };
   const sections = new Element('form');
+  const video = new Element('details');
+  const audio = new Element('details');
+  sections.append(video, audio);
   context.buildCallFields(form, sections, 'term1');
-  context.buildMediaFields(form, sections, 'term1');
+  context.buildVideoFields(form, video, 'term1');
+  context.buildAudioFields(form, audio, 'term1');
   context.buildGeneralFields(form, sections, 'term1');
   for (const [name, field] of Object.entries(form.fields))
     assert.ok(sections.contains(field), `${name} must be attached to the visible form`);
+  assert.ok(video.contains(form.fields.videoFps));
+  assert.ok(audio.contains(form.fields.ringtone));
   assert.equal(form.fields.videoFps.value, '20');
   assert.equal(form.fields.c20SpeakerVolume.value, '55');
   assert.equal(form.fields.ringtoneVolume.value, '50');
@@ -140,6 +146,7 @@ test('terminal drafts retain their original revision and setup downloads propaga
   await form.onsubmit({ preventDefault() {} });
   assert.equal(requests[0].configuration_version, revision);
   assert.equal(requests[0].video_fps, 20);
+  context.buildTerminalTools(card);
   await assert.rejects(
     actions.find(({ text }) => text === 'Download server QR PDF').action(),
     /Download failed/,
@@ -160,8 +167,8 @@ test('terminal drafts retain their original revision and setup downloads propaga
   assert.equal(requests.at(-1).configuration_version, associationVersion);
 });
 
-test('terminal hardware badges distinguish fresh values, unknowns and stale reports', () => {
-  const context = { badge: (text, kind) => ({ text, kind }) };
+test('terminal hardware details distinguish fresh values, unknowns and stale reports', () => {
+  const context = { el: (tag, text) => new Element(tag, text) };
   vm.runInNewContext(
     vm
       .source(path.join(__dirname, '../../../zmala_server/web/admin-terminals.js'), 'utf8')
@@ -172,7 +179,7 @@ test('terminal hardware badges distinguish fresh values, unknowns and stale repo
   const render = (status, fresh = true) => {
     const summary = new Element('div');
     context.appendTerminalHardware(summary, status, fresh);
-    return summary.children;
+    return summary.children.map((row) => row.children.map((child) => child.text).join(': '));
   };
   const status = {
     remote_status: 'connected',
@@ -181,17 +188,13 @@ test('terminal hardware badges distinguish fresh values, unknowns and stale repo
     camera_status: 'connected',
     camera_powered: true,
   };
-  assert.deepEqual(
-    render(status).map((x) => x.text),
-    [
-      'Remote: connected',
-      'Remote battery: 75%',
-      'Remote charger: connected',
-      'C10/C20: connected',
-      'C10/C20 power: on',
-    ],
-  );
-  assert.equal(render(status)[0].kind, 'success');
+  assert.deepEqual(render(status), [
+    'Remote: Connected',
+    'Remote battery: 75%',
+    'Remote charger: Connected',
+    'C10/C20: Connected',
+    'C10/C20 power: On',
+  ]);
   assert.deepEqual(
     render({
       ...status,
@@ -199,20 +202,19 @@ test('terminal hardware badges distinguish fresh values, unknowns and stale repo
       remote_charger_connected: false,
       camera_status: 'off',
       camera_powered: false,
-    }).map((x) => x.text),
+    }),
     [
-      'Remote: connected',
+      'Remote: Connected',
       'Remote battery: 0%',
-      'Remote charger: not connected',
-      'C10/C20: powered off',
-      'C10/C20 power: off',
+      'Remote charger: Not connected',
+      'C10/C20: Powered off',
+      'C10/C20 power: Off',
     ],
   );
-  assert.ok(render(undefined).every((x) => x.text.endsWith('unknown') && x.kind === 'neutral'));
-  assert.deepEqual(
-    render(status, false).map((x) => x.text),
-    ['Remote: status unavailable', 'C10/C20: status unavailable'],
-  );
-  assert.ok(render(status, false).every((x) => x.kind === 'neutral'));
-  assert.equal(render({ ...status, camera_status: 'waking' })[3].text, 'C10/C20: waking');
+  assert.ok(render(undefined).every((value) => value.endsWith('Unknown')));
+  assert.deepEqual(render(status, false), [
+    'Remote: Status unavailable',
+    'C10/C20: Status unavailable',
+  ]);
+  assert.equal(render({ ...status, camera_status: 'waking' })[3], 'C10/C20: Waking');
 });

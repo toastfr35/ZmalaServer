@@ -1,8 +1,8 @@
 dialog {
   color: var(--text);
-  border: 1px solid #354058;
+  border: 1px solid light-dark(#bdc8db, #354058);
   border-radius: 18px;
-  background: #151c28;
+  background: light-dark(#ffffff, #151c28);
   padding: 28px;
   width: min(540px, calc(100vw - 32px));
   max-height: calc(100vh - 48px);
@@ -39,7 +39,7 @@ dialog.compact {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  border-top: 1px solid #2b3446;
+  border-top: 1px solid light-dark(#d9e0ed, #2b3446);
   margin-top: 26px;
   padding-top: 21px;
 }
@@ -49,7 +49,7 @@ dialog.compact {
 label {
   display: block;
   font-size: 14px;
-  color: #b8c6dc;
+  color: light-dark(#3d4e68, #b8c6dc);
   font-weight: 500;
   margin-bottom: 19px;
 }
@@ -58,7 +58,7 @@ label small {
   font-size: 12px;
   line-height: 1.5;
   margin-top: 6px;
-  color: #7f90ad;
+  color: light-dark(#53627a, #7f90ad);
   font-weight: 400;
 }
 input,
@@ -66,33 +66,33 @@ select {
   display: block;
   width: 100%;
   padding: 11px 12px;
-  border: 1px solid #303d55;
+  border: 1px solid light-dark(#bdc8db, #303d55);
   border-radius: 7px;
-  background: #101723;
-  color: #e1e9f8;
+  background: light-dark(#f4f6fa, #101723);
+  color: light-dark(#19243a, #e1e9f8);
   margin-top: 7px;
   min-height: 41px;
   font-size: 14px;
 }
 input::placeholder {
-  color: #647793;
+  color: light-dark(#53627a, #647793);
 }
 input:hover,
 select:hover {
-  border-color: #465573;
+  border-color: light-dark(#8393ad, #465573);
 }
 input:focus,
 select:focus {
-  border-color: #a899dc;
-  outline: 1px solid #a899dc;
+  border-color: light-dark(#7156a8, #a899dc);
+  outline: 1px solid light-dark(#7156a8, #a899dc);
 }
 input[type='file'] {
   font-size: 12px;
   padding: 10px;
 }
 input[type='file']::file-selector-button {
-  background: #283449;
-  color: #b7c6e0;
+  background: light-dark(#eef1f7, #283449);
+  color: light-dark(#3d4e68, #b7c6e0);
   border: 0;
   border-radius: 4px;
   padding: 5px 10px;
@@ -106,10 +106,10 @@ input[type='file']::file-selector-button {
 }
 .info-box {
   padding: 14px;
-  border: 1px solid #303a51;
-  background: #1a2232;
+  border: 1px solid light-dark(#bdc8db, #303a51);
+  background: light-dark(#eef1f7, #1a2232);
   border-radius: 8px;
-  color: #9baecb;
+  color: light-dark(#53627a, #9baecb);
   font-size: 12px;
   line-height: 1.65;
   margin: 18px 0;
@@ -117,9 +117,9 @@ input[type='file']::file-selector-button {
 .danger-icon {
   display: grid;
   place-items: center;
-  background: #3a2330;
-  border: 1px solid #583342;
-  color: #ff9ca6;
+  background: light-dark(#fbe9ec, #3a2330);
+  border: 1px solid light-dark(#e4b7c0, #583342);
+  color: light-dark(#a0283a, #ff9ca6);
   border-radius: 13px;
   width: 47px;
   height: 47px;
@@ -139,7 +139,7 @@ input[type='file']::file-selector-button {
   align-items: center;
   gap: 5px;
   padding: 14px 0;
-  border-bottom: 1px solid #2a3548;
+  border-bottom: 1px solid light-dark(#d9e0ed, #2a3548);
 }
 .credential-row > div {
   flex: 1;
@@ -152,7 +152,7 @@ input[type='file']::file-selector-button {
 }
 .credential-row code {
   font-size: 14px;
-  color: #cedaf0;
+  color: light-dark(#19243a, #cedaf0);
 }
 .credential-feedback {
   margin-top: 8px;

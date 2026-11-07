@@ -5,7 +5,7 @@
 .console-history {
   height: 340px;
   overflow: auto;
-  background: #090e16;
+  background: light-dark(#ffffff, #090e16);
   border: 1px solid var(--line);
   border-radius: 12px;
   padding: 18px;
@@ -39,7 +39,7 @@
   color: var(--accent);
 }
 .console-output {
-  color: #d4dfef;
+  color: light-dark(#19243a, #d4dfef);
 }
 .console-stderr {
   color: var(--danger);
@@ -107,13 +107,13 @@
   display: flex;
   gap: 15px;
   align-items: center;
-  background: #1a2030;
-  border: 1px solid #35314e;
+  background: light-dark(#edf0f8, #1a2030);
+  border: 1px solid light-dark(#d6c8f2, #35314e);
   padding: 18px 22px;
   border-radius: 12px;
   margin-bottom: 24px;
   font-size: 12px;
-  color: #bac5dc;
+  color: light-dark(#3d4e68, #bac5dc);
 }
 .group-intro .icon {
   color: var(--accent);
@@ -157,7 +157,7 @@
   accent-color: var(--accent);
 }
 .group-member-option:has(input:checked) {
-  background: #252039;
+  background: light-dark(#eee9ff, #252039);
 }
 .group-member-option strong,
 .group-member-option small {

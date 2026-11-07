@@ -1,16 +1,16 @@
 :root {
   color-scheme: dark;
-  --bg: #0b0f16;
-  --sidebar: #10141d;
-  --panel: #141a24;
-  --raised: #1a2230;
-  --line: #252d3c;
-  --text: #eaf0fa;
-  --muted: #93a1b8;
-  --accent: #b3a2ff;
-  --accent-bg: #28233e;
-  --green: #72d9b1;
-  --danger: #ff9ca6;
+  --bg: light-dark(#f4f6fa, #0b0f16);
+  --sidebar: light-dark(#f9fafc, #10141d);
+  --panel: light-dark(#ffffff, #141a24);
+  --raised: light-dark(#eef1f7, #1a2230);
+  --line: light-dark(#d9e0ed, #252d3c);
+  --text: light-dark(#19243a, #eaf0fa);
+  --muted: light-dark(#53627a, #93a1b8);
+  --accent: light-dark(#553cb1, #b3a2ff);
+  --accent-bg: light-dark(#eee9ff, #28233e);
+  --green: light-dark(#176448, #72d9b1);
+  --danger: light-dark(#a0283a, #ff9ca6);
   --radius: 16px;
   font-family:
     Segoe UI,
@@ -19,4 +19,8 @@
     sans-serif;
   font-size: 14px;
   line-height: 1.5;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
 }

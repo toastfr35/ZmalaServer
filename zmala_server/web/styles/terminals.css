@@ -28,6 +28,15 @@
 .terminal-card .panel-heading > div {
   min-width: 0;
 }
+.terminal-quick-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  padding: 12px 22px;
+  color: var(--muted);
+  font-size: 13px;
+}
 .terminal-card .terminal-summary {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
@@ -39,9 +48,6 @@
   width: min(440px, 48%);
   margin: 0;
 }
-.terminal-fields {
-  display: block;
-}
 .terminal-settings-form {
   padding: 16px 22px;
   min-width: 0;
@@ -49,8 +55,8 @@
 .terminal-settings-form[data-kind='devices'] {
   padding: 0;
 }
-.terminal-settings-form[data-kind='association'] {
-  border-bottom: 1px solid var(--line);
+.terminal-settings-form[data-kind='devices'] > .banner {
+  margin: 12px 22px;
 }
 .terminal-settings-form h3 {
   font-size: 14px;
@@ -83,16 +89,46 @@
   font-size: 14px;
   overflow-wrap: anywhere;
 }
-.terminal-setting-section {
-  padding: 16px 22px;
-}
-.terminal-setting-section + .terminal-setting-section {
+.terminal-section {
   border-top: 1px solid var(--line);
+}
+.terminal-section > summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  padding: 12px 22px;
+  min-height: 44px;
+  font-weight: 600;
+  list-style: none;
+  cursor: pointer;
+}
+.terminal-section > summary::-webkit-details-marker {
+  display: none;
+}
+.terminal-section > summary::before {
+  content: '›';
+  color: var(--muted);
+}
+.terminal-section[open] > summary {
+  background: var(--raised);
+}
+.terminal-section[open] > summary::before {
+  content: '⌄';
+}
+.terminal-section > summary small {
+  flex: 1 1 110px;
+  color: var(--muted);
+  text-align: right;
+  font-size: 12px;
+  font-weight: 400;
+  overflow-wrap: anywhere;
 }
 .terminal-options {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px 20px;
+  padding: 16px 22px;
 }
 .terminal-options select {
   margin-top: 5px;
@@ -134,7 +170,7 @@
   margin: 0;
   padding: 2px;
   border-radius: 20px;
-  background: #354058;
+  background: light-dark(#bdc8db, #354058);
   cursor: pointer;
   flex-shrink: 0;
 }
@@ -148,7 +184,7 @@
   transition: transform 0.15s;
 }
 .terminal-settings-form .checkbox-row input:checked {
-  background: #a996fa;
+  background: light-dark(#553cb1, #a996fa);
 }
 .terminal-settings-form .checkbox-row input:checked::after {
   transform: translateX(14px);
@@ -169,10 +205,9 @@
 .terminal-tools {
   padding: 14px 22px;
   border-top: 1px solid var(--line);
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: center;
+}
+.terminal-tools > summary {
+  cursor: pointer;
 }
 .terminal-setup summary {
   cursor: pointer;
@@ -195,6 +230,7 @@
 }
 .terminal-tools > .button-row {
   flex-wrap: wrap;
+  margin-top: 12px;
 }
 .console-shell-controls {
   display: flex;
@@ -228,9 +264,6 @@
   .terminal-options {
     grid-template-columns: 1fr;
   }
-  .terminal-tools {
-    flex-wrap: wrap;
-  }
 }
 
 /* @llr LLR-SRV-UI-017 */
@@ -238,16 +271,29 @@
 .terminal-card {
   overflow: visible;
 }
-.terminal-status-group {
+.terminal-status-group h3 {
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+.terminal-status-group dl {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+}
+.terminal-status-group dl > div {
   display: flex;
   flex-wrap: wrap;
-  align-content: start;
-  gap: 6px;
+  justify-content: space-between;
+  gap: 2px 10px;
 }
-.terminal-status-group h3 {
-  flex-basis: 100%;
-  font-size: 14px;
-  margin-bottom: 4px;
+.terminal-status-group dt {
+  color: var(--muted);
+}
+.terminal-status-group dd {
+  margin: 0;
+}
+.terminal-status-group > .badge {
+  margin-top: 8px;
 }
 .terminal-media-intro {
   grid-column: 1 / -1;
@@ -255,17 +301,20 @@
   line-height: 1.6;
 }
 .terminal-save-bar {
-  position: sticky;
-  top: 0;
-  z-index: 2;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 12px;
   padding: 12px 22px;
   background: var(--panel);
-  border-bottom: 1px solid var(--line);
-  box-shadow: 0 4px 12px #0002;
+  border-top: 1px solid var(--line);
+  border-radius: 0 0 var(--radius) var(--radius);
+}
+.terminal-settings-form[data-kind='devices'][data-dirty='true'] .terminal-save-bar {
+  position: sticky;
+  bottom: var(--theme-dock-height, 0px);
+  z-index: 2;
+  box-shadow: 0 -4px 12px #0002;
 }
 .terminal-save-state {
   font-size: 12px;
@@ -274,6 +323,6 @@
 .terminal-settings-form[data-kind='devices'][data-dirty='true'] .terminal-save-state {
   color: var(--accent);
 }
-.terminal-setting-section :is(input, select, button, summary) {
-  scroll-margin-top: 100px;
+.terminal-section :is(input, select, button, summary) {
+  scroll-margin-bottom: 90px;
 }

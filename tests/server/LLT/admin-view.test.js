@@ -2,6 +2,7 @@
 // @requirements LLR-SRV-DIR-033, LLR-SRV-UI-012, LLR-SRV-UI-013, LLR-SRV-UI-014, LLR-SRV-UI-015, LLR-SRV-UI-017, LLR-SRV-CONFIG-018
 // @environment display
 // @plan Render the actual admin HTML/CSS/controllers in headless Chromium with every API replaced by a deterministic fixture. Verify fixed C10/C20 media information without camera, microphone or speaker selectors. Check GIF guidance and first-frame dimensions against accepted and rejected synthetic files. Check six English pages and sign-in at 320, 390, 700 and 1920 pixels, narrow labelled rows, touch sizes, modal scrolling, focused drafts and editor-local errors/cancellation. Check readable supporting text and desktop action targets, name-first terminal choices, unsaved-state feedback and a save bar that stays within the viewport while scrolled.
+// Switch appearance with the keyboard, verify persistence across navigation, and inspect both themes. Verify Device details is first and the other terminal sections open individually.
 // @pass All computed layout and interaction assertions must pass against the mocked API; no live service or account is changed.
 
 'use strict';
@@ -66,6 +67,13 @@ test('admin component fits phones and desktop and preserves modal drafts', async
       await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
       return;
     }
+    if (name === '/zmala-mark-transparent.png') {
+      await route.fulfill({
+        contentType: 'image/png',
+        path: path.resolve(__dirname, '../../../zmala_server/assets/zmala-mark-transparent.png'),
+      });
+      return;
+    }
     const file =
       name === '/zmala-icon.svg'
         ? path.resolve(__dirname, '../../../zmala_server/assets/zmala-icon.svg')
@@ -85,6 +93,11 @@ test('admin component fits phones and desktop and preserves modal drafts', async
   });
   for (const width of [320, 390, 700, 1920]) {
     await page.setViewportSize({ width, height: 800 });
+    await page.goto('http://zmala.test/');
+    const currentTheme = await page.locator('html').getAttribute('data-theme');
+    const nextTheme = width === 320 || width === 700 ? 'light' : 'dark';
+    if ((currentTheme || 'dark') !== nextTheme)
+      await page.getByRole('button', { name: 'Switch to ' + nextTheme + ' mode' }).press('Enter');
     for (const [route, title] of [
       ['/', ''],
       ['/accounts', 'Accounts'],
@@ -96,6 +109,12 @@ test('admin component fits phones and desktop and preserves modal drafts', async
       await page.goto('http://zmala.test' + route);
       await page.locator('#view > *').first().waitFor();
       assert.equal(await page.locator('h1').innerText(), title);
+      assert.equal(
+        await page.locator('html').evaluate((el) => getComputedStyle(el).colorScheme),
+        nextTheme,
+      );
+      const theme = await page.locator('#theme-toggle').boundingBox();
+      assert.ok(theme.x < 30 && theme.y + theme.height > 770 && theme.height >= 44);
       assert.equal(
         await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
         true,
@@ -137,8 +156,19 @@ test('admin component fits phones and desktop and preserves modal drafts', async
         assert.ok(
           await page.getByRole('heading', { name: 'Remote & camera', exact: true }).isVisible(),
         );
+        assert.deepEqual(
+          await page.locator('.terminal-section > summary > span').allTextContents(),
+          ['Device details', 'Calls', 'Video', 'Audio', 'General'],
+        );
+        assert.equal(
+          await page.locator('.terminal-section[open]').getAttribute('data-section'),
+          'device-details',
+        );
+        await page.locator('.terminal-audio > summary').click();
         await page.getByLabel('Call volume (%)', { exact: false }).selectOption('65');
         assert.equal(await page.locator('.terminal-save-state').innerText(), 'Unsaved settings');
+        await page.locator('.terminal-general > summary').click();
+        assert.equal(await page.locator('.terminal-section[open]').count(), 1);
         await page.getByRole('combobox', { name: /^Language/ }).scrollIntoViewIfNeeded();
         const saveBox = await page
           .getByRole('button', { name: 'Save changes', exact: true })
@@ -154,6 +184,7 @@ test('admin component fits phones and desktop and preserves modal drafts', async
             .evaluate((el) => parseFloat(getComputedStyle(el).fontSize) >= 12),
         );
 
+        await page.locator('.terminal-video > summary').click();
         await page.getByText('Nuroum C10/C20 supplies', { exact: false }).waitFor();
         for (const label of ['Camera', 'Microphone', 'Speaker']) {
           assert.equal(await page.getByLabel(label, { exact: true }).count(), 0);

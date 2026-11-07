@@ -73,7 +73,7 @@ small {
 code {
   font-family: Consolas, monospace;
   font-size: 14px;
-  color: #aab8cf;
+  color: light-dark(#3d4e68, #aab8cf);
   overflow-wrap: anywhere;
 }
 .muted {
@@ -102,7 +102,7 @@ code {
   left: 20px;
   padding: 12px;
   background: var(--accent);
-  color: #18132d;
+  color: light-dark(#ffffff, #18132d);
   z-index: 100;
 }
 .skip-link:focus {
@@ -119,7 +119,7 @@ code {
   flex-direction: column;
   background: var(--sidebar);
   border-right: 1px solid var(--line);
-  padding: 30px 18px;
+  padding: 30px 18px 76px;
   z-index: 5;
 }
 .brand {
@@ -142,7 +142,7 @@ code {
 .nav-label {
   font-size: 9px;
   letter-spacing: 1.8px;
-  color: #68768e;
+  color: light-dark(#53627a, #68768e);
   padding: 0 14px;
   margin-bottom: 12px;
 }
@@ -165,7 +165,7 @@ nav a:hover {
 }
 nav a.active {
   background: var(--accent-bg);
-  color: #c8baff;
+  color: light-dark(#553cb1, #c8baff);
 }
 nav a.active:after {
   content: '';
@@ -183,7 +183,7 @@ nav a.active:after {
   padding: 16px 7px 0;
   border-top: 1px solid var(--line);
   font-size: 14px;
-  color: #c6d0df;
+  color: light-dark(#3d4e68, #c6d0df);
 }
 .sidebar-footer small {
   display: block;
@@ -198,10 +198,25 @@ nav a.active:after {
 .admin-auth-controls button {
   width: 100%;
 }
-.sidebar-footer .icon {
-  margin-left: auto;
-  width: 16px;
-  color: #71829c;
+.theme-dock {
+  position: fixed;
+  z-index: 6;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  left: max(18px, env(safe-area-inset-left));
+}
+.icon-button.theme-toggle {
+  background: var(--panel);
+  border-color: var(--line);
+}
+.icon-button.theme-toggle:hover {
+  background: var(--raised);
+}
+.theme-toggle .theme-moon,
+:root[data-theme='light'] .theme-toggle .theme-sun {
+  display: none;
+}
+:root[data-theme='light'] .theme-toggle .theme-moon {
+  display: block;
 }
 .local-dot {
   width: 6px;
@@ -257,29 +272,29 @@ main {
   min-height: 44px;
 }
 .primary {
-  background: #b3a2ff;
-  color: #1c1731;
+  background: light-dark(#553cb1, #b3a2ff);
+  color: light-dark(#ffffff, #1c1731);
   box-shadow: 0 3px 12px #0002;
 }
 .primary:hover {
-  background: #c7baff;
+  background: light-dark(#453193, #c7baff);
 }
 .secondary {
-  background: #1b2330;
-  border-color: #303a4e;
-  color: #c6d2e5;
+  background: light-dark(#eef1f7, #1b2330);
+  border-color: light-dark(#bdc8db, #303a4e);
+  color: light-dark(#3d4e68, #c6d2e5);
 }
 .secondary:hover {
-  background: #252e40;
-  border-color: #44516c;
+  background: light-dark(#e2e8f3, #252e40);
+  border-color: light-dark(#8393ad, #44516c);
 }
 .danger {
-  background: #42232d;
-  border-color: #65303d;
-  color: #ffa6b0;
+  background: light-dark(#fbe9ec, #42232d);
+  border-color: light-dark(#e4b7c0, #65303d);
+  color: light-dark(#a0283a, #ffa6b0);
 }
 .danger:hover {
-  background: #5a2c39;
+  background: light-dark(#f5d9df, #5a2c39);
 }
 .primary .icon,
 .secondary .icon,
@@ -297,7 +312,7 @@ main {
   border-radius: 7px;
   background: transparent;
   border: 1px solid transparent;
-  color: #8f9fb9;
+  color: light-dark(#53627a, #8f9fb9);
   padding: 6px;
 }
 .icon-button .icon {
@@ -311,22 +326,22 @@ main {
   stroke-width: 2;
 }
 .icon-button:hover {
-  background: #242e40;
-  border-color: #354159;
-  color: #d6dff0;
+  background: light-dark(#e2e8f3, #242e40);
+  border-color: light-dark(#bdc8db, #354159);
+  color: light-dark(#19243a, #d6dff0);
 }
 .icon-button[aria-label^='Delete']:hover {
-  background: #42232d;
+  background: light-dark(#fbe9ec, #42232d);
   color: var(--danger);
-  border-color: #65303d;
+  border-color: light-dark(#e4b7c0, #65303d);
 }
 .text-link {
   font-size: 14px;
   font-weight: 500;
-  color: #b3a2ff;
+  color: light-dark(#553cb1, #b3a2ff);
 }
 .text-link:hover {
-  color: #d6ccff;
+  color: light-dark(#453193, #d6ccff);
 }
 .button-row,
 .row-actions {
@@ -344,27 +359,27 @@ main {
   font-size: 12px;
   font-weight: 550;
   line-height: 1.5;
-  border: 1px solid #2c3648;
+  border: 1px solid light-dark(#d9e0ed, #2c3648);
   border-radius: 5px;
   padding: 4px 8px;
   white-space: nowrap;
-  color: #a6b4ca;
-  background: #1b2432;
+  color: light-dark(#3d4e68, #a6b4ca);
+  background: light-dark(#eef1f7, #1b2432);
 }
 .badge.success {
-  color: #7edeb8;
-  background: #172e29;
-  border-color: #29463a;
+  color: light-dark(#176448, #7edeb8);
+  background: light-dark(#e6f5ef, #172e29);
+  border-color: light-dark(#afd7c6, #29463a);
 }
 .badge.accent {
-  color: #c1b1ff;
-  background: #29243e;
-  border-color: #3c3358;
+  color: light-dark(#553cb1, #c1b1ff);
+  background: light-dark(#eee9ff, #29243e);
+  border-color: light-dark(#d6c8f2, #3c3358);
 }
 .badge.neutral {
-  color: #91a0b7;
-  background: #1c2331;
-  border-color: #2d3648;
+  color: light-dark(#53627a, #91a0b7);
+  background: light-dark(#eef1f7, #1c2331);
+  border-color: light-dark(#d9e0ed, #2d3648);
 }
 .banner {
   padding: 12px 15px;
@@ -374,14 +389,14 @@ main {
   font-size: 14px;
 }
 .banner.error {
-  color: #ffacb5;
-  border-color: #66323c;
-  background: #321f28;
+  color: light-dark(#a0283a, #ffacb5);
+  border-color: light-dark(#e4b7c0, #66323c);
+  background: light-dark(#fbe9ec, #321f28);
 }
 .banner.notice {
-  color: #8ee5bf;
-  border-color: #315747;
-  background: #192f27;
+  color: light-dark(#176448, #8ee5bf);
+  border-color: light-dark(#afd7c6, #315747);
+  background: light-dark(#e6f5ef, #192f27);
 }
 .panel {
   background: var(--panel);
@@ -405,7 +420,7 @@ main {
 .panel-note {
   padding: 16px 25px;
   border-top: 1px solid var(--line);
-  background: #121923;
+  background: light-dark(#f9fafc, #121923);
   display: flex;
   align-items: center;
   gap: 10px;
@@ -427,11 +442,11 @@ main {
 .empty-state > .icon {
   width: 32px;
   height: 32px;
-  color: #6a7990;
+  color: light-dark(#53627a, #6a7990);
   margin: 0 auto 12px;
 }
 .empty-state h3 {
-  color: #d6e0ef;
+  color: light-dark(#19243a, #d6e0ef);
   font-size: 16px;
   margin-bottom: 8px;
 }

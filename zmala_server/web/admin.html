@@ -3,9 +3,10 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <meta name="color-scheme" content="dark" />
+    <meta name="color-scheme" content="dark light" />
     <title>Zmala · Administration</title>
     <link rel="icon" href="/zmala-icon.svg" type="image/svg+xml" />
+    <script src="/admin-theme.js"></script>
     <link rel="stylesheet" href="/admin.css" />
     <script src="/admin.js" defer></script>
   </head>
@@ -28,9 +29,27 @@
       <div class="sidebar-footer">
         <span class="local-dot"></span>
         <div><small>Zmala · private network</small></div>
-        <span data-icon="moon"></span>
       </div>
     </aside>
+    <div class="theme-dock">
+      <button
+        id="theme-toggle"
+        class="icon-button theme-toggle"
+        type="button"
+        aria-label="Switch to light mode"
+        title="Switch to light mode"
+      >
+        <svg class="icon theme-sun" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="4" />
+          <path
+            d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5"
+          />
+        </svg>
+        <svg class="icon theme-moon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M20.9 13A9 9 0 0 1 11 3.1 9 9 0 1 0 20.9 13Z" />
+        </svg>
+      </button>
+    </div>
     <div class="workspace">
       <main id="content" tabindex="-1">
         <div class="page-heading" hidden>

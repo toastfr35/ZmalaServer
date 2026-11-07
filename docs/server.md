@@ -408,6 +408,9 @@ itself. Host/origin checks reject unrecognized addresses. The first visitor sets
 a shared 12–256-character password; there is no administrator username or role
 hierarchy. First setup is available remotely on the trusted LAN.
 
+Use the sun or moon button at the bottom left to switch the administration
+interface between light and dark mode. The browser remembers the choice.
+
 **Change password** requires the current password and revokes other sessions.
 **Sign out** revokes the current one. Sessions expire after eight hours and on
 restart. Cookies are HttpOnly/SameSite=Strict, with Secure added for HTTPS. Login
@@ -482,11 +485,12 @@ and groups stay with accounts. Both accounts are checked for active calls.
 Renaming preserves linked records while changing the SIP address. Active calls
 also block credential/type changes and account deletion.
 
-Terminal selectors show the account name first and retain the full hardware serial in
-Account association. Cards separate Connection, Remote & camera and enabled Call features
-status from the settings. Terminal cards group Calls, Video & audio and General settings.
-A sticky Save changes bar shows Unsaved settings for a modified settings form;
-association changes remain a separate submission. **Setup** downloads
+Terminal selectors show the account name first. **Device details** opens
+first and contains connection, hardware, and call-feature status, account
+association with the full serial number, and **Setup & maintenance**.
+**Calls**, **Video**, **Audio**, and **General** open one at a time and share
+the sticky **Save changes** bar. Account association has its own submission.
+**Setup** downloads
 Wi-Fi/server QR PDFs; **Console** selects the maintenance shell. These QR PDFs
 are runtime provisioning documents, separate from project documentation. App setup
 sheets have two numbered sections: an APK-download QR with a clickable latest-release

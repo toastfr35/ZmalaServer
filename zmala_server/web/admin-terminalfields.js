@@ -73,8 +73,8 @@ export function buildCallFields(devices, calls, id) {
   calls.append(auto, countdown);
 }
 
-/** @param {import('../types/admin-dom').TerminalForm} devices @param {HTMLElement} media @param {string} id */
-export function buildMediaFields(devices, media, id) {
+/** @param {import('../types/admin-dom').TerminalForm} devices @param {HTMLElement} video @param {string} id */
+export function buildVideoFields(devices, video, id) {
   const profile = state.model.profiles[id];
   // @llr LLR-SRV-CONFIG-018
   const hardware = el(
@@ -124,6 +124,12 @@ export function buildMediaFields(devices, media, id) {
   );
   // Keep help beneath the switch caption rather than as a third flex column.
   framing.classList.add('checkbox-help');
+  video.append(hardware, resolution, frameRate, framing);
+}
+
+/** @param {import('../types/admin-dom').TerminalForm} devices @param {HTMLElement} sound @param {string} id */
+export function buildAudioFields(devices, sound, id) {
+  const profile = state.model.profiles[id];
   const audio = terminalSelect(
     devices,
     'Audio processing',
@@ -159,12 +165,12 @@ export function buildMediaFields(devices, media, id) {
       'C10/C20 call playback only. 5% steps. Default: 50%. Ringtone and button sounds have separate levels.',
     ),
   );
-  media.append(hardware, resolution, frameRate, framing, audio, volume, ringtoneField(devices, id));
+  sound.append(audio, volume, ringtoneField(devices, id));
   for (const [key, field, title, fallback] of [
     ['ringtone_volume', 'ringtoneVolume', 'Ringtone volume (%)', profile.c20_speaker_volume ?? 50],
     ['action_sound_volume', 'actionSoundVolume', 'Button sounds volume (%)', 20],
   ]) {
-    media.append(
+    sound.append(
       terminalSelect(
         devices,
         String(title),
