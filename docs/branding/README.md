@@ -28,4 +28,4 @@ The intended palette is navy #172033, lavender #AA91F0 and mint #55BA91. Generat
 
 Generated using the built-in image tool from the approved A1 and A3 drafts. generation-prompts.json records the six edit prompts. PNG exports were resized from those masters without redesigning the artwork.
 
-These approved assets supply the shared runtime branding. Run `node build_tools/create-product-icon.cjs` after changing an approved PNG; use `--check` to verify the derived runtime copies. A1 dark supplies terminal and server marks and in-app Android branding; A1 light supplies installer and document marks. A3 dark supplies the Android launcher foreground. The runtime SVG embeds its PNG so the existing favicon URL stays self-contained. App signing and package identity are unchanged.
+The [shared transparent A1 mark](https://github.com/toastfr35/Zmala/blob/main/docs/branding/PNG/a1-mark-transparent-256.png) supplies the Server welcome logo. A1 dark supplies the favicon, and A1 light supplies document marks. The favicon SVG embeds its PNG so its existing URL stays self-contained.
