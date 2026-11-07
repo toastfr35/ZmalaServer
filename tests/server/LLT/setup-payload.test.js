@@ -1,9 +1,9 @@
 // @test S-LLT-022
 // @requirements LLR-SRV-ENROLL-002, LLR-SRV-ENROLL-003, LLR-SRV-ENROLL-004
 // @environment portable
-// @plan Generate setup payloads and PDF bytes directly; reject invalid Wi-Fi input, decode compact UTF-8 identity and inspect current setup instruction/privacy text, one A4 page and QR module geometry with its four-module quiet border.
-// App sheets contain two distinct QR payloads; terminal sheets contain one and explain Android Wi-Fi sharing.
-// Check long labels/URLs remain on one page and every QR retains its quiet border.
+// @plan Generate setup payloads and PDF bytes directly; reject invalid Wi-Fi input and decode compact UTF-8 identity.
+// Inspect Wi-Fi and Terminal sheets for one A5 face on landscape A4, full-width QR geometry, four-module quiet borders, logo, minimal text and no printed credentials.
+// App sheets retain two distinct QR payloads and portrait A4 instructions. Long labels/URLs must not create extra pages.
 // @pass All payload fields, validation cases and PDF structure assertions must pass; physical print readability remains a system check.
 
 'use strict';
@@ -13,7 +13,7 @@ const { wifiPayload, serverPayload, setupPdf } = require('../../../zmala_server/
 const { inflateSync } = require('node:zlib');
 const QRCode = require('../../../zmala_server/node_modules/qrcode');
 
-test('printed instructions match current English setup screens and explain privacy', async (t) => {
+test('foldable sheets show only branding, scan prompt and privacy note', async (t) => {
   const PDFDocument = require('node:module').createRequire(
     require.resolve('../../../zmala_server/setup-pdf'),
   )('pdfkit');
@@ -23,21 +23,30 @@ test('printed instructions match current English setup screens and explain priva
     text.push(args[0]);
     return original.apply(this, args);
   });
-  for (const [kind, prompt, privacy] of [
-    ['wifi', 'Scan the Wi-Fi QR code', 'This code contains the Wi-Fi password.'],
-    ['server', 'Scan the server QR code', 'This code grants access to this account.'],
+  const originalImage = PDFDocument.prototype.image;
+  const images = [];
+  t.mock.method(PDFDocument.prototype, 'image', function (...args) {
+    images.push(args);
+    return originalImage.apply(this, args);
+  });
+  for (const [kind, heading, prompt] of [
+    ['wifi', 'Wi-Fi', 'Scan the Wi-Fi QR code'],
+    ['server', 'Terminal', 'Scan the server QR code'],
   ]) {
     text.length = 0;
-    const pdf = await setupPdf({ kind, label: 'Fixture', payload: 'fixture' });
-    assert.equal(pdf.subarray(0, 5).toString(), '%PDF-');
-    assert.ok(
-      text.some((line) => line.includes(`"${prompt}"`)),
+    images.length = 0;
+    const pdf = await setupPdf({
       kind,
-    );
-    assert.ok(
-      text.some((line) => line.includes(privacy) && line.includes('Keep this page private.')),
-    );
-    assert.ok(text.some((line) => line.includes('Print at actual size (100%).')));
+      label: 'Private label that must not print',
+      payload: 'private-credentials',
+      serverUrl: 'https://private.example.test',
+    });
+    assert.equal(pdf.subarray(0, 5).toString(), '%PDF-');
+    assert.deepEqual(text, ['Zmala', heading, prompt, 'Private setup code']);
+    assert.equal(images.length, 1);
+    assert.match(images[0][0], /zmala-icon-light\.png$/);
+    assert.ok(images[0][1] > 841.89 / 2, 'Logo belongs on the printed half');
+    assert.match(pdf.toString('latin1'), /\/MediaBox \[0 0 841\.89 595\.28\]/);
   }
 });
 
@@ -61,37 +70,53 @@ test('Wi-Fi QR escaping, validation and printable PDF', async () => {
     { ssid: 'a\n', security: 'nopass' },
   ])
     assert.throws(() => wifiPayload(bad));
-  const pdf = await setupPdf({ kind: 'wifi', label: input.ssid, payload });
-  assert.equal(pdf.subarray(0, 5).toString(), '%PDF-');
-  // PDF byte size says
-  // nothing about whether the page and its QR code were actually generated.
-  const source = pdf.toString('latin1');
-  assert.match(source, /%%EOF\s*$/);
-  assert.equal((source.match(/\/Type \/Page\b/g) || []).length, 1);
-  assert.match(source, /\/MediaBox \[0 0 595\.28 841\.89\]/);
-  const streams = [...source.matchAll(/<<(.*?)>>\s*stream\r?\n(.*?)\r?\nendstream/gs)]
-    .filter((match) => match[1].includes('/FlateDecode'))
-    .map((match) => inflateSync(Buffer.from(match[2], 'latin1')).toString('latin1'));
-  const page = streams.find((stream) => stream.includes(' re\n'));
-  assert.ok(page, 'Missing QR drawing commands');
-  const qr = QRCode.create(payload, { errorCorrectionLevel: 'M' });
-  const darkModules = [...qr.modules.data].filter(Boolean).length;
-  assert.equal((page.match(/ re\n/g) || []).length, darkModules + 1);
-  const rectangles = [...page.matchAll(/([\d.]+) ([\d.]+) ([\d.]+) ([\d.]+) re\n/g)].map((m) =>
-    m.slice(1).map(Number),
-  );
-  const [background, ...modules] = rectangles;
-  const [x, y, width, height] = background;
-  assert.equal(width, height);
-  const unit = width / (qr.modules.size + 8);
-  assert.ok(Math.abs(Math.min(...modules.map((r) => r[0])) - x - 4 * unit) < 0.001);
-  assert.ok(Math.abs(Math.min(...modules.map((r) => r[1])) - y - 4 * unit) < 0.001);
-  for (const [left, top, w, h] of modules) {
-    assert.ok(left >= x + 4 * unit - 0.001 && top >= y + 4 * unit - 0.001);
-    assert.ok(left + w <= x + width - 4 * unit + 0.016);
-    assert.ok(top + h <= y + height - 4 * unit + 0.016);
+  for (const [kind, value] of [
+    ['wifi', payload],
+    [
+      'server',
+      serverPayload({
+        server_url: 'https://calls.example.test',
+        device_id: 'terminal',
+        device_token: 'a'.repeat(64),
+      }),
+    ],
+  ]) {
+    const pdf = await setupPdf({ kind, label: input.ssid, payload: value });
+    assert.equal(pdf.subarray(0, 5).toString(), '%PDF-');
+    // PDF byte size says
+    // nothing about whether the page and its QR code were actually generated.
+    const source = pdf.toString('latin1');
+    assert.match(source, /%%EOF\s*$/);
+    assert.equal((source.match(/\/Type \/Page\b/g) || []).length, 1);
+    assert.match(source, /\/MediaBox \[0 0 841\.89 595\.28\]/);
+    const streams = [...source.matchAll(/<<(.*?)>>\s*stream\r?\n(.*?)\r?\nendstream/gs)]
+      .filter((match) => match[1].includes('/FlateDecode'))
+      .map((match) => inflateSync(Buffer.from(match[2], 'latin1')).toString('latin1'));
+    const page = streams.find((stream) => stream.includes(' re\n'));
+    assert.ok(page, 'Missing QR drawing commands');
+    const qr = QRCode.create(value, { errorCorrectionLevel: 'M' });
+    const darkModules = [...qr.modules.data].filter(Boolean).length;
+    assert.equal((page.match(/ re\n/g) || []).length, darkModules + 1);
+    const rectangles = [...page.matchAll(/([\d.]+) ([\d.]+) ([\d.]+) ([\d.]+) re\n/g)].map((m) =>
+      m.slice(1).map(Number),
+    );
+    const [background, ...modules] = rectangles;
+    const [x, y, width, height] = background;
+    assert.equal(width, height);
+    const margin = (10 * 72) / 25.4;
+    assert.ok(Math.abs(x - (841.89 / 2 + margin)) < 0.001);
+    assert.ok(Math.abs(width - (841.89 / 2 - 2 * margin)) < 0.001);
+    assert.ok(y >= margin && y + height <= 595.28 - margin);
+    const unit = width / (qr.modules.size + 8);
+    assert.ok(Math.abs(Math.min(...modules.map((r) => r[0])) - x - 4 * unit) < 0.001);
+    assert.ok(Math.abs(Math.min(...modules.map((r) => r[1])) - y - 4 * unit) < 0.001);
+    for (const [left, top, w, h] of modules) {
+      assert.ok(left >= x + 4 * unit - 0.001 && top >= y + 4 * unit - 0.001);
+      assert.ok(left + w <= x + width - 4 * unit + 0.016);
+      assert.ok(top + h <= y + height - 4 * unit + 0.016);
+    }
+    assert.match(page, /\bBT\b/); // The page also contains the setup instructions.
   }
-  assert.match(page, /\bBT\b/); // The page also contains the setup instructions.
 });
 
 test('app setup includes a clickable APK download and concise installation steps on one page', async (t) => {
@@ -112,6 +137,7 @@ test('app setup includes a clickable APK download and concise installation steps
     serverUrl: 'https://calls.example.test',
   });
   const source = pdf.toString('latin1');
+  assert.match(source, /\/MediaBox \[0 0 595\.28 841\.89\]/);
   assert.equal((source.match(/\/Type \/Page\b/g) || []).length, 1);
   assert.match(
     source,
@@ -190,26 +216,17 @@ test('account sheets separate download and setup codes and tolerate long labels'
     assert.deepEqual(
       values,
       app
-        ? [
-            'https://github.com/toastfr35/ZmalaApp/releases/latest/download/ZmalaPhone.apk',
-            payload,
-          ]
+        ? ['https://github.com/toastfr35/ZmalaApp/releases/latest/download/ZmalaPhone.apk', payload]
         : [payload],
     );
     assert.equal((pdf.toString('latin1').match(/\/Type \/Page\b/g) || []).length, 1);
     if (!app) {
-      for (const phrase of [
-        'Android phone already connected',
-        'Share or QR code',
-        'Unlock the phone',
-        'Scan the Wi-Fi QR code',
-        'Ethernet cable',
+      assert.deepEqual(lines, [
+        'Zmala',
+        'Terminal',
         'Scan the server QR code',
-      ])
-        assert.ok(
-          lines.some((line) => line.includes(phrase)),
-          phrase,
-        );
+        'Private setup code',
+      ]);
     }
   }
 });
