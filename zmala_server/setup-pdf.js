@@ -57,6 +57,7 @@ async function setupPdf({ kind, label, payload, serverUrl, app = false }) {
   const apk = 'https://github.com/toastfr35/ZmalaApp/releases/latest/download/ZmalaPhone.apk';
   const doc = new PDFDocument({
     size: 'A4',
+    layout: phone ? 'portrait' : 'landscape',
     margin: 40,
     info: { Title: `Zmala - ${phone ? 'phone' : kind} setup`, Author: 'Zmala' },
   });
@@ -95,6 +96,41 @@ async function setupPdf({ kind, label, payload, serverUrl, app = false }) {
           doc.rect(x + (col + 4) * unit, y + (row + 4) * unit, unit + 0.015, unit + 0.015);
     doc.fill();
   }
+  if (!phone) {
+    // One portrait A5 face on the right of landscape A4; fold the blank half behind it.
+    // Keep all ink inside 10 mm margins, including the QR's four-module quiet zone.
+    const half = doc.page.width / 2,
+      margin = (10 * 72) / 25.4,
+      left = half + margin,
+      faceWidth = half - 2 * margin;
+    doc.image(path.join(__dirname, 'assets/zmala-icon-light.png'), left, margin, {
+      width: 42,
+      height: 42,
+    });
+    text('Zmala', left + 50, 36, faceWidth - 50, 24, 32, true);
+    doc
+      .moveTo(left, 84)
+      .lineTo(left + faceWidth, 84)
+      .lineWidth(2)
+      .stroke(accent);
+    text(kind === 'wifi' ? 'Wi-Fi' : 'Terminal', left, 101, faceWidth, 25, 34, true);
+    text(
+      kind === 'wifi' ? 'Scan the Wi-Fi QR code' : 'Scan the server QR code',
+      left,
+      140,
+      faceWidth,
+      12,
+      20,
+    );
+    qr(payload, left, 174, faceWidth);
+    doc
+      .font('Helvetica')
+      .fontSize(9)
+      .fillColor(muted)
+      .text('Private setup code', left, 554, { width: faceWidth, align: 'center', height: 14 });
+    doc.end();
+    return result;
+  }
   /** @param {number} n @param {string} title @param {number} y */
   function step(n, title, y) {
     doc.circle(54, y + 10, 14).fill(accent);
@@ -113,130 +149,62 @@ async function setupPdf({ kind, label, payload, serverUrl, app = false }) {
     .font('Helvetica-Bold')
     .fontSize(9)
     .fillColor(accent)
-    .text(phone ? 'PHONE SETUP' : 'TERMINAL SETUP', 350, 70, { width: 205, align: 'right' });
-  text(
-    phone ? 'A little setup. More connection.' : 'Ready to connect.',
-    40,
-    109,
-    width,
-    28,
-    38,
-    true,
-  );
-  text(
-    phone
-      ? 'Two simple steps to set up your Android phone.'
-      : kind === 'wifi'
-        ? 'Connect your terminal to Wi-Fi.'
-        : 'Connect your terminal to your account.',
-    40,
-    151,
-    width,
-    12,
-    24,
-  );
+    .text('PHONE SETUP', 350, 70, { width: 205, align: 'right' });
+  text('A little setup. More connection.', 40, 109, width, 28, 38, true);
+  text('Two simple steps to set up your Android phone.', 40, 151, width, 12, 24);
   doc.roundedRect(40, 185, width, 60, 8).lineWidth(0.7).fillAndStroke('#F3F6F5', '#A9B8B4');
-  text(kind === 'wifi' ? 'WI-FI NETWORK' : 'YOUR ACCOUNT', 54, 196, 485, 8, 12, true);
+  text('YOUR ACCOUNT', 54, 196, 485, 8, 12, true);
   text(label, 54, 212, 485, 16, 24, true);
-  if (phone) {
-    step(1, 'Install the app', 269);
-    qr(apk, 40, 305, 158);
-    text('Scan with your phone camera', 217, 309, 338, 13, 22, true);
-    text(
-      'Download ZmalaPhone.apk, then open it in Downloads or your file manager. If asked, allow installation from that app, then tap Install.',
-      217,
-      340,
-      338,
-      11,
-      75,
-    );
-    doc
-      .font('Helvetica-Bold')
-      .fontSize(11)
-      .fillColor(accent)
-      .text('Or tap here to download the app', 217, 420, {
-        width: 338,
-        link: apk,
-        underline: true,
-      });
-    doc.moveTo(40, 480).lineTo(555.28, 480).lineWidth(0.6).stroke('#A9B8B4');
-    step(2, 'Connect your account', 499);
-    qr(payload, 40, 535, 205);
-    text('Scan this code in Zmala Phone', 265, 544, 290, 13, 38, true);
-    text(
-      'Open Zmala Phone and choose Scan setup QR. Allow camera, microphone and notifications.',
-      265,
-      589,
-      290,
-      11,
-      53,
-    );
-    text(
-      "Print this page or show it on another screen to scan. If the PDF is on this phone, use the app's QR-image import with a screenshot of this second code.",
-      265,
-      649,
-      290,
-      10,
-      78,
-    );
-  } else {
-    if (kind === 'server') {
-      step(1, 'Connect to Wi-Fi first', 268);
-      text(
-        'On an Android phone already connected to your Wi-Fi, open Settings > Wi-Fi (or Internet). Select the connected network, then Share or QR code. Unlock the phone if asked.',
-        40,
-        303,
-        width,
-        11,
-        47,
-      );
-      text(
-        'When the terminal says "Scan the Wi-Fi QR code", show the phone screen to its camera. Menu names vary by phone. Using an Ethernet cable? Skip this step.',
-        40,
-        351,
-        width,
-        11,
-        47,
-      );
-      step(2, 'Connect your account', 408);
-      qr(payload, (doc.page.width - 270) / 2, 444, 270);
-      text(
-        'At "Scan the server QR code", show this printed code to the terminal camera.',
-        40,
-        720,
-        width,
-        11,
-        24,
-      );
-    } else {
-      step(1, 'Scan your Wi-Fi code', 268);
-      qr(payload, (doc.page.width - 300) / 2, 309, 300);
-      text('Show this code to the terminal camera.', 40, 630, width, 17, 25, true);
-      text('Use when the screen says "Scan the Wi-Fi QR code".', 40, 665, width, 12, 25);
-      text(
-        'Keep the whole square visible and hold it steady until setup finishes.',
-        40,
-        696,
-        width,
-        11,
-        28,
-      );
-    }
-  }
+  step(1, 'Install the app', 269);
+  qr(apk, 40, 305, 158);
+  text('Scan with your phone camera', 217, 309, 338, 13, 22, true);
+  text(
+    'Download ZmalaPhone.apk, then open it in Downloads or your file manager. If asked, allow installation from that app, then tap Install.',
+    217,
+    340,
+    338,
+    11,
+    75,
+  );
+  doc
+    .font('Helvetica-Bold')
+    .fontSize(11)
+    .fillColor(accent)
+    .text('Or tap here to download the app', 217, 420, {
+      width: 338,
+      link: apk,
+      underline: true,
+    });
+  doc.moveTo(40, 480).lineTo(555.28, 480).lineWidth(0.6).stroke('#A9B8B4');
+  step(2, 'Connect your account', 499);
+  qr(payload, 40, 535, 205);
+  text('Scan this code in Zmala Phone', 265, 544, 290, 13, 38, true);
+  text(
+    'Open Zmala Phone and choose Scan setup QR. Allow camera, microphone and notifications.',
+    265,
+    589,
+    290,
+    11,
+    53,
+  );
+  text(
+    "Print this page or show it on another screen to scan. If the PDF is on this phone, use the app's QR-image import with a screenshot of this second code.",
+    265,
+    649,
+    290,
+    10,
+    78,
+  );
   if (serverUrl) text(`Server: ${serverUrl}`, 40, 746, width, 9, 15);
   doc.moveTo(40, 770).lineTo(555.28, 770).lineWidth(0.6).stroke('#A9B8B4');
   doc
     .font('Helvetica')
     .fontSize(8)
     .fillColor(muted)
-    .text(
-      kind === 'wifi'
-        ? 'This code contains the Wi-Fi password. Keep this page private.'
-        : 'This code grants access to this account. Keep this page private.',
-      40,
-      780,
-      { width, height: 12 },
-    );
+    .text('This code grants access to this account. Keep this page private.', 40, 780, {
+      width,
+      height: 12,
+    });
   doc.text(
     'Print at actual size (100%). Keep the full code and its white border visible.',
     40,

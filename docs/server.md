@@ -490,10 +490,13 @@ association changes remain a separate submission. **Setup** downloads
 Wi-Fi/server QR PDFs; **Console** selects the maintenance shell. These QR PDFs
 are runtime provisioning documents, separate from project documentation. App setup
 sheets have two numbered sections: an APK-download QR with a clickable latest-release
-link, then the private enrollment QR with installation and scan instructions. Terminal
-account sheets contain one enrollment QR and first explain Android Wi-Fi sharing
-(Settings > connected Wi-Fi network > Share/QR code); Ethernet users skip that step.
-Both are single-page A4 layouts with black-on-white vector QR codes, four-module
+link, then the private enrollment QR with installation and scan instructions. Wi-Fi and Terminal sheets place a single portrait A5 face on the right half of
+landscape A4, with the left half blank. Print on A4 at actual size (100%),
+then fold the blank half behind the printed half. Each face has the Zmala logo,
+a short heading and scan prompt, a private-code note, and one QR spanning the
+printable width inside 10 mm margins. Network credentials, account labels and
+server URLs are carried only by the QR, not repeated as text. App sheets keep
+their portrait A4 layout. All sheets use black-on-white vector QR codes, four-module
 quiet borders and high-contrast text suitable for grayscale printing. Display the QR on another screen, print it, or use the
 app's QR-image import.
 Settings include auto-answer, fixed C20 hardware information, resolution, FPS, framing,
