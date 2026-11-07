@@ -35,8 +35,8 @@ async function runtimeProcess(t, overrides = {}) {
     path.join(directory, 'build_tools/build-admin.cjs'),
   );
   await fs.cp(
-    path.join(root, 'zmala_terminal/common/shared'),
-    path.join(directory, 'zmala_terminal/common/shared'),
+    path.join(root, 'vendor/terminal-contracts'),
+    path.join(directory, 'vendor/terminal-contracts'),
     { recursive: true },
   );
   const store = new Store(path.join(serverRoot, 'data'));
@@ -53,6 +53,7 @@ async function runtimeProcess(t, overrides = {}) {
     'ZMALA_TLS_KEY',
     'ZMALA_HTTPS_PORT',
     'ZMALA_ADMIN_PASSWORD_FILE',
+    'ZMALA_BOOTSTRAP_EXPORT_DIRECTORY',
   ])
     delete env[key];
   const child = spawn(process.execPath, [path.join(serverRoot, 'main.js')], {
