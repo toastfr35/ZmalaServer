@@ -842,6 +842,12 @@ contribute to server coverage even though the file is outside `zmala_server/`.
 
 ## Secure calls when a terminal network blocks UDP
 
+The disposable multi-network lab is maintained in the Zmala image builder.
+Set ZMALA_IMAGE_BUILDER_ROOT to a reviewed checkout and follow its lab README
+to prepare the pinned combined application input before running the Server
+network lab HLT launchers.
+
+
 Secure relay mode is an explicit deployment choice for all Terminal and App accounts.
 The default remains the existing LAN SIP/UDP relay. Secure mode uses HTTPS for
 configuration, SIP over TLS, and endpoint ICE/SRTP through coturn over TLS. It
