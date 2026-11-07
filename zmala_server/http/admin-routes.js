@@ -1,7 +1,7 @@
 // @ts-check
 'use strict';
 // Administrator-only operations; handler.js authenticates the caller before dispatching here.
-const { wifiPayload, serverPayload, setupPdf } = require('../setup-pdf');
+const { wifiPayload, serverPayload, compactServerPayload, setupPdf } = require('../setup-pdf');
 const { send: sendResponse, readJson, httpError } = require('./responses');
 const developerAccess = require('../developer-access');
 const { sshStatus, setSsh } = require('../server-ssh');
@@ -119,13 +119,14 @@ async function adminRoutes(req, res, url, context) {
     const id = url.searchParams.get('id') || '';
     if (!store.enrolledAccount(id)) throw Error('Choose an app or terminal account.');
     const bootstrap = store.bootstrap(id, true),
-      pdf = await setupPdf({
-        kind: 'server',
-        label: `${store.value.users[id].name} (${id})`,
-        payload: serverPayload(bootstrap),
-        serverUrl: bootstrap.server_url,
-        app: bootstrap.account_type === 'app',
-      });
+      app = bootstrap.account_type === 'app';
+    const pdf = await setupPdf({
+      kind: 'server',
+      label: `${store.value.users[id].name} (${id})`,
+      payload: app ? serverPayload(bootstrap) : compactServerPayload(bootstrap),
+      serverUrl: bootstrap.server_url,
+      app,
+    });
     res.setHeader('Content-Disposition', `attachment; filename="zmalacall-server-${id}.pdf"`);
     return send(res, 200, pdf, 'application/pdf');
   }

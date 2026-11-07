@@ -49,6 +49,52 @@ function wifiPayload({ ssid, password = '', security = 'WPA', hidden = false }) 
 function serverPayload(bootstrap) {
   return JSON.stringify({ type: 'family-call-server', version: 1, ...bootstrap });
 }
+
+// @llr LLR-SRV-ENROLL-004
+/** @param {import('./types/contracts').Enrollment} bootstrap */
+function compactServerPayload({ server_url, device_id, device_token }) {
+  const url = new URL(server_url);
+  if (
+    !['http:', 'https:'].includes(url.protocol) ||
+    url.username ||
+    url.password ||
+    url.search ||
+    url.hash ||
+    url.pathname !== '/' ||
+    url.origin.length > 512 ||
+    !/^[A-Za-z0-9_-]{1,80}$/.test(device_id) ||
+    !/^[A-Za-z0-9_-]{20,256}$/.test(device_token)
+  )
+    throw Error('Invalid terminal enrollment for a compact QR.');
+
+  // Only pack canonical UUIDs and Base64URL tokens so reconstruction is exact.
+  const uuid = /^ZM-[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(device_id);
+  const rawToken = Buffer.from(device_token, 'base64url');
+  const binaryToken = rawToken.toString('base64url') === device_token;
+  const authority = Buffer.from(url.host, 'ascii');
+  const header = Buffer.alloc(3);
+  header[0] = (url.protocol === 'https:' ? 1 : 0) | (uuid ? 2 : 0) | (binaryToken ? 4 : 0);
+  header.writeUInt16BE(authority.length, 1);
+  const id = uuid
+    ? Buffer.from(device_id.slice(3).replaceAll('-', ''), 'hex')
+    : Buffer.concat([Buffer.from([device_id.length]), Buffer.from(device_id, 'ascii')]);
+  const data = Buffer.concat([
+    header,
+    authority,
+    id,
+    binaryToken ? rawToken : Buffer.from(device_token, 'ascii'),
+  ]);
+
+  const alphabet = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:';
+  let text = 'ZMS1:';
+  for (let i = 0; i < data.length; i += 2) {
+    const pair = i + 1 < data.length;
+    const value = pair ? data.readUInt16BE(i) : data[i];
+    text += alphabet[value % 45] + alphabet[Math.floor(value / 45) % 45];
+    if (pair) text += alphabet[Math.floor(value / (45 * 45))];
+  }
+  return text;
+}
 // @llr LLR-SRV-ENROLL-002
 /** @param {{kind: 'wifi' | 'server', label: string, payload: string, serverUrl?: string, app?: boolean}} options
  * @returns {Promise<Buffer>} */
@@ -225,4 +271,4 @@ async function setupPdf({ kind, label, payload, serverUrl, app = false }) {
   doc.end();
   return result;
 }
-module.exports = { wifiPayload, serverPayload, setupPdf };
+module.exports = { wifiPayload, serverPayload, compactServerPayload, setupPdf };
