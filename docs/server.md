@@ -492,9 +492,9 @@ are runtime provisioning documents, separate from project documentation. App set
 sheets have two numbered sections: an APK-download QR with a clickable latest-release
 link, then the private enrollment QR with installation and scan instructions. Wi-Fi and Terminal sheets place a single portrait A5 face on the right half of
 landscape A4, with the left half blank. Print on A4 at actual size (100%),
-then fold the blank half behind the printed half. Each face has the Zmala logo,
+then fold the blank half behind the printed half. A thin frame surrounds the Zmala logo,
 a short heading and scan prompt, a private-code note, and one QR spanning the
-printable width inside 10 mm margins. Network credentials, account labels and
+printable width inside 10 mm content margins. Network credentials, account labels and
 server URLs are carried only by the QR, not repeated as text. App sheets keep
 their portrait A4 layout. All sheets use black-on-white vector QR codes, four-module
 quiet borders and high-contrast text suitable for grayscale printing. Display the QR on another screen, print it, or use the

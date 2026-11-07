@@ -98,11 +98,22 @@ async function setupPdf({ kind, label, payload, serverUrl, app = false }) {
   }
   if (!phone) {
     // One portrait A5 face on the right of landscape A4; fold the blank half behind it.
-    // Keep all ink inside 10 mm margins, including the QR's four-module quiet zone.
+    // The frame sits outside the content margins and the QR's four-module quiet zone.
     const half = doc.page.width / 2,
+      frameInset = (6 * 72) / 25.4,
       margin = (10 * 72) / 25.4,
       left = half + margin,
       faceWidth = half - 2 * margin;
+    doc
+      .roundedRect(
+        half + frameInset,
+        frameInset,
+        half - 2 * frameInset,
+        doc.page.height - 2 * frameInset,
+        8,
+      )
+      .lineWidth(0.9)
+      .stroke(accent);
     doc.image(path.join(__dirname, 'assets/zmala-icon-light.png'), left, margin, {
       width: 42,
       height: 42,
