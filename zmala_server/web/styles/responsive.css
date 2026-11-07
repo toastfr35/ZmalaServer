@@ -237,6 +237,7 @@
     margin-left: 0;
   }
   .server-details,
+  .server-ssh:not(:empty),
   .terminal-status-list,
   .registration-list,
   .callback-policy-body,

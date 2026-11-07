@@ -23,6 +23,7 @@ for (const file of fs.readdirSync(WEB)) {
   if (/^admin(?:-[a-z]+)?\.js$/.test(file)) assets['/' + file] = [file, 'text/javascript'];
 }
 assets['/admin.css'] = ['admin.css', 'text/css'];
+assets['/zmala-mark-transparent.png'] = ['../assets/zmala-mark-transparent.png', 'image/png'];
 /** Host/origin, browser sessions and terminal bearer tokens meet at this boundary. */
 /** @param {import('../types/http').HttpContext} context */
 function createHandler(context) {

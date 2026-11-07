@@ -769,7 +769,8 @@ main {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 24px;
 }
-.server-details {
+.server-details,
+.server-ssh:not(:empty) {
   margin: 0;
   padding: 0 25px 20px;
 }
@@ -1703,6 +1704,7 @@ input[type='file']::file-selector-button {
     margin-left: 0;
   }
   .server-details,
+  .server-ssh:not(:empty),
   .terminal-status-list,
   .registration-list,
   .callback-policy-body,
