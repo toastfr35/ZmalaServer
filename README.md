@@ -4,7 +4,6 @@ This repository contains the Zmala Pi server.
 
 - [Technical guide](docs/server.md)
 - [Development and requirements](docs/general.md)
-- [Migration provenance](docs/migration/provenance.json)
 - [Downloads](https://github.com/toastfr35/ZmalaServer/releases)
 
 ## Related repositories
