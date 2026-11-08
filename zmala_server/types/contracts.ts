@@ -40,6 +40,17 @@ export interface AppAccount extends AccountDetails {
   device_token: string;
 }
 export type Account = TerminalAccount | AppAccount;
+export type UsbPowerMode = 'always_on' | 'camera' | 'camera_and_dock';
+export type TvProfile = '' | 'samsung' | 'cec';
+export type TvTestOutcome = 'passed' | 'failed' | 'skipped';
+export interface TvTestResults {
+  device_id: string;
+  profile: Exclude<TvProfile, ''>;
+  power: TvTestOutcome;
+  source: TvTestOutcome;
+  power_attempts: number;
+  source_attempts: number;
+}
 export interface TerminalProfile {
   display_name: string;
   language: string;
@@ -50,6 +61,9 @@ export interface TerminalProfile {
   auto_framing: boolean;
   carousel_portraits: 3 | 5;
   tv_idle_seconds: number;
+  usb_power?: UsbPowerMode;
+  tv_profile?: TvProfile;
+  tv_test_results?: TvTestResults | null;
   c20_speaker_volume: number;
   ringtone_volume?: number;
   action_sound_volume?: number;
@@ -130,6 +144,9 @@ export interface TerminalConfiguration {
   auto_framing: boolean;
   carousel_portraits: 3 | 5;
   tv_idle_seconds: number;
+  usb_power: UsbPowerMode;
+  tv_profile: TvProfile;
+  tv_test_results: TvTestResults | null;
   c20_speaker_volume: number;
   ringtone_volume?: number;
   action_sound_volume?: number;

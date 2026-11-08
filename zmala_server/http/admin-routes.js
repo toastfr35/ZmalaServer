@@ -206,6 +206,9 @@ async function adminRoutes(req, res, url, context) {
   if (url.pathname === '/api/settings' && req.method === 'PUT') {
     const update = await readJson(req, 10000);
     version(update);
+    // Older admin callers round-trip the whole profile. Only the device route
+    // can write TV test results.
+    delete update.tv_test_results;
     const id = update.terminal_id || v.local_terminal_id;
     if (id !== null && typeof id !== 'string') throw Error('Choose a terminal account.');
     store.setSettings(id, update);

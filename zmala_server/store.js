@@ -3,6 +3,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
+const { isDeepStrictEqual } = require('node:util');
 const { defaultState, lanAddress } = require('./defaults');
 const { own, accountId, validateGroup, autoAnswerFields } = require('./validation');
 const { terminalProfileFields } = require('./terminal-settings');
@@ -199,6 +200,9 @@ class Store {
       carousel_portraits: p.carousel_portraits ?? 3,
       // @llr LLR-SRV-CONFIG-025
       tv_idle_seconds: p.tv_idle_seconds ?? 1800,
+      usb_power: p.usb_power ?? 'always_on',
+      tv_profile: p.tv_profile ?? '',
+      tv_test_results: p.tv_test_results?.device_id === u.device_id ? p.tv_test_results : null,
       c20_speaker_volume: p.c20_speaker_volume ?? 50,
       ringtone_volume: p.ringtone_volume ?? p.c20_speaker_volume ?? 50,
       action_sound_volume: p.action_sound_volume ?? 20,
@@ -240,7 +244,7 @@ class Store {
     const p = this.requireTerminal(id),
       account = this.terminalAccount(id);
     if (!account) throw Error('Choose a terminal account.');
-    const fields = terminalProfileFields(p, update);
+    const fields = terminalProfileFields(p, update, account.device_id);
     if (fields.ringtone !== 'nokia' && !own(this.value.ringtones || {}, fields.ringtone || ''))
       throw Error('Choose an available ringtone.');
     const answer = autoAnswerFields(update);
@@ -270,6 +274,9 @@ class Store {
       'action_sound_volume',
       'carousel_portraits',
       'tv_idle_seconds',
+      'usb_power',
+      'tv_profile',
+      'tv_test_results',
       'ringtone',
     ];
     const keys = Object.keys(changes);
@@ -282,11 +289,17 @@ class Store {
       throw Error('Invalid local terminal settings.');
     const current = /** @type {unknown} */ (this.config(id));
     const values = /** @type {Record<string, unknown>} */ (current);
-    if (keys.some((key) => values[key] !== expected[key] && values[key] !== changes[key]))
+    if (
+      keys.some(
+        (key) =>
+          !isDeepStrictEqual(values[key], expected[key]) &&
+          !isDeepStrictEqual(values[key], changes[key]),
+      )
+    )
       throw Object.assign(Error('This setting changed on the server. Try again.'), { status: 409 });
     // A retry after a lost HTTP acknowledgement still reaches the route's
     // persistence barrier, but must not create another revision or SD write.
-    if (keys.every((key) => values[key] === changes[key])) return;
+    if (keys.every((key) => isDeepStrictEqual(values[key], changes[key]))) return;
     const p = this.requireTerminal(id);
     this.setSettings(id, { display_name: p.display_name, ...p.terminal_settings, ...changes });
   }

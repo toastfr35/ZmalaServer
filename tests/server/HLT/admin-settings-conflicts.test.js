@@ -57,9 +57,21 @@ test('stale admin settings cannot overwrite another admin or local terminal edit
     );
     assert.equal(new Store(directory).config('term1').language, 'fr');
 
-    const fresh = await save({ ...draft(), command_shell: 'bash' });
+    const tvResults = {
+      device_id: store.config('term1').device_id,
+      profile: 'cec',
+      power: 'passed',
+      source: 'skipped',
+      power_attempts: 1,
+      source_attempts: 0,
+    };
+    store.setDeviceSettings('term1', { tv_profile: 'cec' }, { tv_profile: '' });
+    store.setDeviceSettings('term1', { tv_test_results: tvResults }, { tv_test_results: null });
+    await store.flush();
+    const fresh = await save({ ...draft(), command_shell: 'bash', tv_test_results: null });
     assert.equal(fresh.status, 200);
     assert.equal(store.config('term1').language, 'fr');
+    assert.deepEqual(new Store(directory).config('term1').tv_test_results, tvResults);
     assert.equal(store.value.profiles.term1.command_shell, 'bash');
   } finally {
     await fixture.close();

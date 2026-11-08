@@ -222,4 +222,47 @@ export function buildGeneralFields(devices, general, id) {
       String(profile.tv_idle_seconds ?? 1800),
     ),
   );
+  const power = terminalSelect(
+    devices,
+    'USB power',
+    'usbPower',
+    [
+      ['always_on', 'Always on'],
+      ['camera', 'Auto on/off for camera only'],
+      ['camera_and_dock', 'Auto on/off for camera and remote dock'],
+    ],
+    profile.usb_power ?? 'always_on',
+  );
+  power.append(
+    el(
+      'small',
+      'Automatic modes switch the shared USB supply after 60 seconds idle. Dock mode also powers the supply below 25% battery.',
+    ),
+  );
+  const television = terminalSelect(
+    devices,
+    'TV model',
+    'tvProfile',
+    [
+      ['', 'Use Terminal selection'],
+      ['samsung', 'Samsung Smart TV'],
+      ['cec', 'Other TV (HDMI-CEC)'],
+    ],
+    profile.tv_profile ?? '',
+  );
+  const results = profile.tv_test_results;
+  const outcomes = { passed: 'Passed', failed: 'Failed', skipped: 'Skipped' };
+  /** @param {number} count */
+  const attempts = (count) => `${count} attempt${count === 1 ? '' : 's'}`;
+  general.append(
+    power,
+    television,
+    el(
+      'p',
+      results
+        ? `TV tests · Power: ${outcomes[results.power]} (${attempts(results.power_attempts)}) · Input: ${outcomes[results.source]} (${attempts(results.source_attempts)})`
+        : 'TV tests have not been saved.',
+      'help',
+    ),
+  );
 }

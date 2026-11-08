@@ -15,6 +15,8 @@ references:
   type: file
 - path: zmala_server/http/device-routes.js
   type: file
+- path: zmala_server/http/admin-routes.js
+  type: file
 - path: zmala_server/store.js
   type: file
 - path: zmala_server/terminal-settings.js
@@ -25,9 +27,12 @@ reviewed: null
 scope: Core
 text: |
   Local writes shall permit only language, automatic answer, framing, volume,
-  ringtone, portrait count and TV timeout fields. Each field shall match its
+  ringtone, portrait count, TV timeout, USB power mode, TV model and TV test
+  results fields. Results shall belong to the enrolled device and selected
+  model, and only the enrolled Terminal shall submit them. A model change
+  shall clear old results. Each field shall match its
   supplied previous value or already equal the requested value. A conflict shall
   return 409 before mutation. An unchanged retry shall preserve the revision and
   still wait for persistence.
 verification: |
-  Interleave local and administrator writes. Test forbidden fields, mismatched expected keys, conflicts, unchanged retries and delayed persistence.
+  Interleave local and administrator writes. Test forbidden fields, mismatched expected keys, conflicts, unchanged retries and delayed persistence. Check USB and TV preferences, model changes, result binding and structural equality of retried results.

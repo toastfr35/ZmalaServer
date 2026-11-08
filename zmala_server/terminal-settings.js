@@ -24,6 +24,33 @@ function speakerVolume(value) {
   return value;
 }
 
+/** @param {unknown} value @param {import('./types/contracts').TvProfile} profile @param {string} deviceId
+ * @returns {import('./types/contracts').TvTestResults | null} */
+function tvTestResults(value, profile, deviceId) {
+  if (value === null) return null;
+  if (!profile || !value || typeof value !== 'object' || Array.isArray(value))
+    throw Error('Invalid TV test results.');
+  const result = /** @type {import('./types/contracts').JsonObject} */ (value);
+  if (Object.keys(result).length !== 6) throw Error('Invalid TV test results.');
+  if (result.profile !== profile || result.device_id !== deviceId)
+    throw Error('TV test results do not match this Terminal and model.');
+  /** @param {unknown} count */
+  function attempts(count) {
+    if (typeof count !== 'number' || !Number.isSafeInteger(count) || count < 0)
+      throw Error('Invalid TV test attempt count.');
+    return count;
+  }
+  const outcomes = /** @type {const} */ (['passed', 'failed', 'skipped']);
+  return {
+    device_id: deviceId,
+    profile,
+    power: choice(result.power, outcomes, 'Invalid TV power result.'),
+    source: choice(result.source, outcomes, 'Invalid TV input result.'),
+    power_attempts: attempts(result.power_attempts),
+    source_attempts: attempts(result.source_attempts),
+  };
+}
+
 // @llr LLR-SRV-CONFIG-018
 /** @param {import('./types/contracts').JsonObject} update
  * @returns {import('./types/contracts').TerminalSettings} */
@@ -41,8 +68,9 @@ function mediaDevices(update) {
  * Store commits these and the separately validated account fields together.
  * @param {import('./types/contracts').TerminalProfile} profile
  * @param {import('./types/contracts').JsonObject} update
+ * @param {string} [deviceId]
  * @returns {import('./types/contracts').TerminalProfile} */
-function terminalProfileFields(profile, update) {
+function terminalProfileFields(profile, update, deviceId = '') {
   if (
     typeof update.display_name !== 'string' ||
     !update.display_name.trim() ||
@@ -53,6 +81,16 @@ function terminalProfileFields(profile, update) {
   const language = proposed(update, 'language', profile.language || 'en');
   if (typeof language !== 'string' || !own(LANGUAGES, language))
     throw Error('Choose a supported terminal language.');
+  // @llr LLR-SRV-CONFIG-021
+  const tvProfile = choice(
+    proposed(update, 'tv_profile', profile.tv_profile ?? ''),
+    /** @type {const} */ (['', 'samsung', 'cec']),
+    'Choose a supported TV model.',
+  );
+  const retainedResults =
+    profile.tv_test_results?.device_id === deviceId && tvProfile === profile.tv_profile
+      ? profile.tv_test_results
+      : null;
   return {
     display_name: update.display_name.trim(),
     language,
@@ -95,6 +133,17 @@ function terminalProfileFields(profile, update) {
       proposed(update, 'tv_idle_seconds', profile.tv_idle_seconds ?? 1800),
       /** @type {const} */ ([0, 30, 60, 120, 300, 600, 1200, 1800]),
       'Choose a supported TV idle timeout.',
+    ),
+    usb_power: choice(
+      proposed(update, 'usb_power', profile.usb_power ?? 'always_on'),
+      /** @type {const} */ (['always_on', 'camera', 'camera_and_dock']),
+      'Choose a supported USB power mode.',
+    ),
+    tv_profile: tvProfile,
+    tv_test_results: tvTestResults(
+      proposed(update, 'tv_test_results', retainedResults),
+      tvProfile,
+      deviceId,
     ),
     c20_speaker_volume: speakerVolume(
       proposed(update, 'c20_speaker_volume', profile.c20_speaker_volume ?? 50),
