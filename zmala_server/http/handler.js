@@ -24,6 +24,19 @@ for (const file of fs.readdirSync(WEB)) {
 }
 assets['/admin.css'] = ['admin.css', 'text/css'];
 assets['/zmala-mark-transparent.png'] = ['../assets/zmala-mark-transparent.png', 'image/png'];
+// @llr LLR-SRV-UI-012
+function readServerVersion() {
+  for (const file of ['../release-version.json', '../../VERSION.json']) {
+    try {
+      const { version } = JSON.parse(fs.readFileSync(path.resolve(__dirname, file), 'utf8'));
+      if (typeof version === 'string' && /^\d+\.\d+\.\d+$/.test(version)) return 'v' + version;
+    } catch {
+      // The source checkout does not contain the generated release file.
+    }
+  }
+  return '';
+}
+const serverVersion = readServerVersion();
 /** Host/origin, browser sessions and terminal bearer tokens meet at this boundary. */
 /** @param {import('../types/http').HttpContext} context */
 function createHandler(context) {
@@ -173,6 +186,10 @@ function createHandler(context) {
       // @llr LLR-SRV-AUTH-023
       if (req.method === 'GET' && assets[url.pathname]) {
         const [file, type] = assets[url.pathname];
+        if (file === 'admin.html') {
+          const html = await asyncFs.readFile(path.join(WEB, file), 'utf8');
+          return send(res, 200, html.replace('<!-- SERVER_VERSION -->', serverVersion), type);
+        }
         return send(res, 200, await asyncFs.readFile(path.join(WEB, file)), type);
       }
       if (!admin) return send(res, 401, { error: 'Sign in with the admin password.' });

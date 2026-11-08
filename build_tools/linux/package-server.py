@@ -39,6 +39,7 @@ def package(destination=None):
             if path.suffix in ('.py', '.sh', '.js', '.cjs', '.json', '.service', '.conf', '.css', '.html', '.ts', '.md', '.svg'):
                 data = data.replace(b'\r\n', b'\n')
             add(path.relative_to(ROOT).as_posix(), data, 0o755 if path.suffix == '.sh' else 0o644)
+        add('zmala_server/release-version.json', (json.dumps({'version': version})+'\n').encode())
         add('install.sh', b'#!/bin/sh\nset -eu\ncd -- "$(dirname -- "$0")"\nexec sh build_tools/linux/install-server.sh "$@"\n', 0o755)
         metadata = {'schema': 1, 'component': 'server', 'architecture': 'arm64',
                     'version': version, 'commit': commit}

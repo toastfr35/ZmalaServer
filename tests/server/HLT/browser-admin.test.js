@@ -13,6 +13,7 @@ const assert = require('node:assert/strict');
 const { chromium } = require('playwright');
 const { httpFixture } = require('../../support/server/http-fixture');
 const { Store } = require('../../../zmala_server/store');
+const { version } = require('../../../VERSION.json');
 
 test(
   'phone and desktop browser edits use real authentication, persistence and revision checks',
@@ -51,6 +52,16 @@ test(
         );
         await page.getByRole('button', { name: 'Sign out', exact: true }).waitFor();
         assert.equal(await page.locator('h1').innerText(), heading);
+        const versionLabel = page.locator('.server-version');
+        assert.equal(await versionLabel.innerText(), 'v' + version);
+        const versionBox = await versionLabel.boundingBox();
+        const themeBox = await page.locator('#theme-toggle').boundingBox();
+        assert.ok(
+          versionBox.x >= themeBox.x + themeBox.width && versionBox.x + versionBox.width <= width,
+        );
+        assert.ok(
+          Math.abs(versionBox.y + versionBox.height / 2 - themeBox.y - themeBox.height / 2) <= 2,
+        );
         if (route === '/')
           await page.getByRole('heading', { name: 'Keep your family connected.' }).waitFor();
         assert.equal(
