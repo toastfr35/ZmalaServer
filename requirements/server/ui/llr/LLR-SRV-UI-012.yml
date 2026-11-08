@@ -11,6 +11,8 @@ ref: ''
 references:
 - path: tests/server/LLT/admin-view.test.js
   type: file
+- path: zmala_server/http/handler.js
+  type: file
 - path: zmala_server/web/admin-main.js
   type: file
 - path: zmala_server/web/admin-pages.js
@@ -28,5 +30,7 @@ scope: Core
 text: |
   The English interface shall provide Overview, Accounts, Groups, Terminals, Callbacks and Activity pages. Recent events shall appear on Activity and ongoing calls on Overview.
   A keyboard-accessible moon and sun control at the bottom left shall switch between dark and light appearance. The selection shall persist across pages and reloads when local browser storage is available.
+  The running Server software version shall appear beside the theme control.
 verification: |
   Navigate all pages with current fixture state and verify selected-page headings, ongoing calls and activity content. Switch themes with the keyboard and verify the selected appearance and control location at phone and desktop widths.
+  Check the installed Server version appears beside the theme control at both widths.

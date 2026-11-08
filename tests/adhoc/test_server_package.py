@@ -35,6 +35,8 @@ class ServerPackageTests(unittest.TestCase):
                 commit = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()
                 self.assertEqual(manifest, {'schema': 1, 'component': 'server', 'architecture': 'arm64',
                                             'version': expected['version'], 'commit': commit})
+                self.assertEqual(json.load(archive.extractfile('zmala_server/release-version.json')),
+                                 {'version': manifest['version']})
                 listed = {name: digest for digest, name in
                           (line.split('  ', 1) for line in archive.extractfile('SHA256SUMS').read().decode().splitlines())}
                 self.assertEqual(set(listed), names - {'SHA256SUMS'})

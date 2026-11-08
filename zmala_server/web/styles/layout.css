@@ -200,9 +200,22 @@ nav a.active:after {
 }
 .theme-dock {
   position: fixed;
+  display: flex;
+  align-items: center;
+  gap: 9px;
   z-index: 6;
   bottom: max(16px, env(safe-area-inset-bottom));
   left: max(18px, env(safe-area-inset-left));
+}
+.server-version {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 44px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.server-version:empty {
+  display: none;
 }
 .icon-button.theme-toggle {
   background: var(--panel);
