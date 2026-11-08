@@ -11,8 +11,27 @@ export async function openDeveloperAccess(id) {
   );
   const instructions = el(
     'p',
-    'Connect through the server to 127.0.0.1 port 22001, using the remote Pi’s own SSH account. Point its C10/C20 at the TV to check the picture during plugin testing.',
+    'Connect through the server to 127.0.0.1 port 22001. Password login requires a Terminal image that supports it.',
   );
+  const username = el('p');
+  const password = el('input');
+  password.type = 'password';
+  password.readOnly = true;
+  password.autocomplete = 'off';
+  const credentials = el('div');
+  const label = el('label', 'SSH password');
+  label.append(password);
+  const reveal = actionButton(
+    'Show password',
+    () => {
+      const show = password.type === 'password';
+      password.type = show ? 'text' : 'password';
+      reveal.textContent = show ? 'Hide password' : 'Show password';
+    },
+    'secondary',
+  );
+  credentials.append(username, label, reveal);
+  credentials.hidden = true;
   const error = el('p', null, 'banner error');
   error.hidden = true;
   error.setAttribute('role', 'alert');
@@ -24,6 +43,7 @@ export async function openDeveloperAccess(id) {
     explanation,
     status,
     instructions,
+    credentials,
     error,
     enable,
     disable,
@@ -44,7 +64,17 @@ export async function openDeveloperAccess(id) {
           : 'Developer access is off.';
       enable.disabled = !data.supported || !!data.terminal_id;
       disable.disabled = !data.terminal_id;
+      const operator = data.terminal_id === id ? data.operator : null;
+      if (password.value !== (operator?.password || '')) {
+        password.type = 'password';
+        reveal.textContent = 'Show password';
+        password.value = operator?.password || '';
+      }
+      username.textContent = operator ? 'SSH username: ' + operator.username : '';
+      credentials.hidden = !operator;
     } catch {
+      password.value = '';
+      credentials.hidden = true;
       error.textContent = 'Could not read developer access status.';
       error.hidden = false;
     } finally {
@@ -54,6 +84,8 @@ export async function openDeveloperAccess(id) {
   /** @param {string | null} terminal */
   async function change(terminal) {
     enable.disabled = disable.disabled = true;
+    password.value = '';
+    credentials.hidden = true;
     try {
       await api('/api/developer-access', 'PUT', { terminal_id: terminal });
       error.hidden = true;

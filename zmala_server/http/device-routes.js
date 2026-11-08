@@ -35,6 +35,19 @@ async function deviceRoutes(req, res, url, context) {
   if (await callPhotoRoute(req, res, url, context)) return true;
   const { store, sipServer, callbacks, consoleJobs, terminalStatuses } = context;
   let { deviceId } = context;
+  // @llr LLR-SRV-HOST-007
+  if (url.pathname === '/api/device/developer-operator' && req.method === 'GET') {
+    const id = requireDevice(deviceId);
+    const terminal = store.terminalAccount(id);
+    if (!terminal || !store.secureCalls || url.protocol !== 'https:')
+      throw httpError(403, 'Developer operator approval requires an enrolled terminal over HTTPS.');
+    const activation = await developerAccess.control('config', {
+      terminal_id: id,
+      device_id: terminal.device_id,
+      operator: true,
+    });
+    return send(res, 200, { terminal_id: terminal.device_id, activation });
+  }
   // @llr LLR-SRV-MAINT-022
   if (url.pathname.startsWith('/api/terminal-updates/')) {
     deviceId = requireDevice(deviceId);

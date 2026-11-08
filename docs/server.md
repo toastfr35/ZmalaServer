@@ -246,18 +246,19 @@ restricted `terminal` account. Forward public TCP 2222 to the server Pi's TCP
 remote forward bound to `127.0.0.1:22001`, without server shell sessions, local
 forwarding, agent forwarding or stream-local forwarding.
 
-The root-owned helper generates a fresh password on each activation, binds it
-to the selected account and device identity, and stores it outside the account
-backup at `/var/lib/zmalacall-developer/session.json`. Only that device's HTTPS
-configuration response contains it. Public/admin status responses contain no
-password. Disabling stops the sshd service and its entire process group before
-locking the account and deleting the secret, so established tunnels are revoked.
+The root-owned helper generates separate reverse-tunnel and operator passwords
+on each activation, binds them to the selected account and device, and stores
+them outside account backups. The signed-in administrator can reveal the
+operator password in the selected terminal's dialog. The enrolled device gets
+the reverse-tunnel password and can request the operator password verifier over
+HTTPS. Disabling stops the sshd service and its entire process group before
+locking the tunnel account and deleting the activation.
 
-From a PC on the server subnet, use your normal server and remote-Pi credentials:
-`ssh -J SERVER_USER@SERVER_LAN_ADDRESS -p 22001 PI_USER@127.0.0.1`.
-The generated tunnel password is not the remote Pi's login password. Check the
-remote Pi's SSH host key; a different selected terminal can legitimately have a
-different key. SSH restrictions do not replace authentication. Router rules must
+From a PC on the server subnet, connect with
+`ssh -J SERVER_USER@SERVER_LAN_ADDRESS -p 22001 zmala@127.0.0.1`.
+Use the displayed operator password at the Terminal prompt. Password login
+requires a supported Terminal image. Check the remote Pi's SSH host key;
+a different selected terminal can legitimately have a different key. Router rules must
 never forward ordinary administrative SSH, including routers that rewrite the
 source address to a local address.
 
