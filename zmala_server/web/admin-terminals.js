@@ -325,6 +325,8 @@ function buildDevicesForm(card, id) {
           video_fps: Number(fields.videoFps.value),
           carousel_portraits: Number(fields.carouselPortraits.value),
           tv_idle_seconds: Number(fields.tvIdleSeconds.value),
+          usb_power: fields.usbPower.value,
+          tv_profile: fields.tvProfile.value,
           auto_framing: terminalInput(devices, 'autoFraming').checked,
           c20_speaker_volume: Number(fields.c20SpeakerVolume.value),
           ringtone_volume: Number(fields.ringtoneVolume.value),

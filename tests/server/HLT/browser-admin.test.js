@@ -3,6 +3,7 @@
 // @environment display
 // @plan Run the assembled HTTP application against isolated persistent state and open its actual assets in Chromium, without API mocks. Set a password through the page, navigate six pages at 320 and 1920 pixels, save terminal call volume and confirm its persisted value, create an account, provoke an opening-revision conflict from a second client, and cancel the retained draft. Reload to check the accepted account and sign out to check the session boundary.
 // Save from a different terminal section. An invalid field in a collapsed section must reopen it before submission.
+// Save USB power and the TV model, then submit TV test outcomes as the enrolled Terminal and verify they render.
 // @pass The real service must persist accepted input, reject the stale edit, retain its visible draft, and fit both viewports without page-wide horizontal scrolling. This is browser integration evidence, not a physical touch-device test.
 
 'use strict';
@@ -78,14 +79,43 @@ test(
     assert.equal(await page.locator('.terminal-save-state').innerText(), 'Unsaved settings');
     await page.locator('.terminal-general > summary').click();
     await page.getByRole('combobox', { name: /^Language/ }).scrollIntoViewIfNeeded();
+    await page.getByRole('combobox', { name: /^USB power/ }).selectOption('camera_and_dock');
+    await page.getByRole('combobox', { name: /^TV model/ }).selectOption('cec');
     await page.getByRole('button', { name: 'Save changes', exact: true }).click();
     await page.getByText('Saved terminal settings for term1.', { exact: true }).waitFor();
     assert.equal(new Store(fixture.directory).value.profiles.term1.c20_speaker_volume, 65);
+    const terminal = fixture.store.config('term1');
+    assert.equal(terminal.usb_power, 'camera_and_dock');
+    assert.equal(terminal.tv_profile, 'cec');
     assert.equal(await page.locator('.terminal-save-state').innerText(), 'Settings saved');
     assert.equal(
       await page.locator('.terminal-section[open]').getAttribute('data-section'),
       'general',
     );
+    const result = await fetch(fixture.base + '/api/device/settings', {
+      method: 'POST',
+      headers: {
+        Authorization: 'Bearer ' + fixture.store.value.users.term1.device_token,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        settings: {
+          tv_test_results: {
+            device_id: terminal.device_id,
+            profile: 'cec',
+            power: 'passed',
+            source: 'failed',
+            power_attempts: 1,
+            source_attempts: 2,
+          },
+        },
+        expected: { tv_test_results: null },
+      }),
+    });
+    assert.equal(result.status, 200, await result.text());
+    await page.reload();
+    await page.locator('.terminal-general > summary').click();
+    await page.getByText(/Power: Passed \(1 attempt\).*Input: Failed \(2 attempts\)/).waitFor();
     await page.goto(fixture.base + '/accounts');
     await page.getByRole('button', { name: 'New account', exact: true }).click();
     await page.locator('#edit-name').fill('Browser fixture');

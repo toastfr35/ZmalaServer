@@ -132,6 +132,47 @@ test('reassociation carries serial credentials and profile, leaves personal iden
   });
 });
 
+test('USB power and TV selections persist with device-bound, idempotent TV results', async (t) => {
+  const s = storeFixture(t);
+  const initial = s.config('term1');
+  assert.equal(initial.usb_power, 'always_on');
+  assert.equal(initial.tv_profile, '');
+  s.setDeviceSettings(
+    'term1',
+    { usb_power: 'camera', tv_profile: 'cec' },
+    {
+      usb_power: 'always_on',
+      tv_profile: '',
+    },
+  );
+  const results = {
+    device_id: initial.device_id,
+    profile: 'cec',
+    power: 'passed',
+    source: 'skipped',
+    power_attempts: 2,
+    source_attempts: 0,
+  };
+  for (const invalid of [
+    { ...results, device_id: 'different-terminal' },
+    { ...results, profile: 'samsung' },
+  ])
+    assert.throws(() =>
+      s.setDeviceSettings('term1', { tv_test_results: invalid }, { tv_test_results: null }),
+    );
+  s.setDeviceSettings('term1', { tv_test_results: results }, { tv_test_results: null });
+  const revision = s.config('term1').configuration_version;
+  s.setDeviceSettings('term1', { tv_test_results: { ...results } }, { tv_test_results: null });
+  assert.equal(s.config('term1').configuration_version, revision);
+  assert.deepEqual(s.config('term1').tv_test_results, results);
+  await s.flush();
+  const { Store } = require('../../../zmala_server/store');
+  assert.deepEqual(new Store(s.dir).config('term1').tv_test_results, results);
+  s.setDeviceSettings('term1', { tv_profile: 'samsung' }, { tv_profile: 'cec' });
+  assert.equal(s.config('term1').tv_test_results, null);
+  assert.equal(s.config('term1').usb_power, 'camera');
+});
+
 test('LAN selection prefers physical private IPv4 then external IPv4 then loopback', (t) => {
   const address = (ip, internal = false, family = 'IPv4') => ({ address: ip, internal, family });
   const network = t.mock.method(os, 'networkInterfaces', () => ({

@@ -80,6 +80,10 @@ Picture processing limits input size and concurrent work.
 The server stores each terminal's language, call, media and presentation settings.
 It checks each proposed change before it changes the accepted configuration.
 Terminal users can change only the local subset exposed by their Settings page.
+In **Terminals → General**, choose USB power mode and the TV model. The
+Terminal reports its completed TV power and input tests with attempt counts.
+Changing the TV model clears the previous results. Wi-Fi credentials, remote
+pairing and TV connection details stay on the Terminal.
 
 Browser editors retain the revision they opened. Account creation checks this
 revision too; a stale new-account form receives the same conflict as an edit. Local terminal edits compare the

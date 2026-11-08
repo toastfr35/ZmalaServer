@@ -1686,6 +1686,49 @@ function buildGeneralFields(devices, general, id) {
       String(profile.tv_idle_seconds ?? 1800),
     ),
   );
+  const power = terminalSelect(
+    devices,
+    'USB power',
+    'usbPower',
+    [
+      ['always_on', 'Always on'],
+      ['camera', 'Auto on/off for camera only'],
+      ['camera_and_dock', 'Auto on/off for camera and remote dock'],
+    ],
+    profile.usb_power ?? 'always_on',
+  );
+  power.append(
+    el(
+      'small',
+      'Automatic modes switch the shared USB supply after 60 seconds idle. Dock mode also powers the supply below 25% battery.',
+    ),
+  );
+  const television = terminalSelect(
+    devices,
+    'TV model',
+    'tvProfile',
+    [
+      ['', 'Use Terminal selection'],
+      ['samsung', 'Samsung Smart TV'],
+      ['cec', 'Other TV (HDMI-CEC)'],
+    ],
+    profile.tv_profile ?? '',
+  );
+  const results = profile.tv_test_results;
+  const outcomes = { passed: 'Passed', failed: 'Failed', skipped: 'Skipped' };
+  /** @param {number} count */
+  const attempts = (count) => `${count} attempt${count === 1 ? '' : 's'}`;
+  general.append(
+    power,
+    television,
+    el(
+      'p',
+      results
+        ? `TV tests · Power: ${outcomes[results.power]} (${attempts(results.power_attempts)}) · Input: ${outcomes[results.source]} (${attempts(results.source_attempts)})`
+        : 'TV tests have not been saved.',
+      'help',
+    ),
+  );
 }
 
 // admin-developer.js
@@ -2064,6 +2107,8 @@ function buildDevicesForm(card, id) {
           video_fps: Number(fields.videoFps.value),
           carousel_portraits: Number(fields.carouselPortraits.value),
           tv_idle_seconds: Number(fields.tvIdleSeconds.value),
+          usb_power: fields.usbPower.value,
+          tv_profile: fields.tvProfile.value,
           auto_framing: terminalInput(devices, 'autoFraming').checked,
           c20_speaker_volume: Number(fields.c20SpeakerVolume.value),
           ringtone_volume: Number(fields.ringtoneVolume.value),
