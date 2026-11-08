@@ -1,7 +1,7 @@
 // @test S-LLT-019
 // @requirements LLR-SRV-START-007, LLR-SRV-DIR-024, LLR-SRV-DIR-027, LLR-SRV-DIR-028, LLR-SRV-DIR-032, LLR-SRV-APP-003, LLR-SRV-CONFIG-021, LLR-SRV-CONFIG-022, LLR-SRV-ENROLL-005
 // @environment portable
-// @plan Create isolated accounts, mutate revisions and reassign serials; assert random independent credentials, private cached terminal and phone directory views, compare-and-set settings, device-owned profiles and bootstrap identity. Feed network-interface fixtures to check LAN address preference and fallback.
+// @plan Create isolated accounts, mutate revisions and reassign serials; assert random independent credentials, private cached terminal and phone directory views, compare-and-set settings, device-owned profiles and bootstrap identity. Check that each Terminal receives its own portrait and a removal advances the configuration revision. Feed network-interface fixtures to check LAN address preference and fallback.
 // @pass Every identity, privacy, invalidation and rejected-write assertion must pass; HTTP active-call exclusion is checked separately.
 
 'use strict';
@@ -61,6 +61,27 @@ test('derived views reuse stable computation and invalidate after edits without 
   assert.equal(build.mock.callCount(), 2);
   s.deleteGroup('family');
   assert.equal(s.contacts('term1')[0].can_call, false);
+});
+
+test('Terminal configuration carries its own current portrait path', (t) => {
+  const s = storeFixture(t);
+  const firstPhoto = '/photos/aabb.png';
+  const secondPhoto = '/photos/ccdd.gif';
+  s.updateAccount('term1', { type: 'terminal', name: 'First', photo: firstPhoto });
+  s.createAccount({
+    id: 'second',
+    type: 'terminal',
+    name: 'Second',
+    photo: secondPhoto,
+    emails: ['second@example.test'],
+  });
+  assert.equal(s.config('term1').account_photo, firstPhoto);
+  assert.equal(s.config('second').account_photo, secondPhoto);
+  const revision = s.config('term1').configuration_version;
+  s.updateAccount('term1', { type: 'terminal', name: 'First', photo: '' });
+  assert.equal(s.config('term1').account_photo, '');
+  assert.ok(s.config('term1').configuration_version > revision);
+  assert.equal(s.config('second').account_photo, secondPhoto);
 });
 
 test('local settings reject protected fields and stale values, accept idempotent retries', (t) => {

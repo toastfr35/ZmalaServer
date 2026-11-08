@@ -121,6 +121,7 @@ export interface TerminalConfiguration {
   device_id: string;
   account_type: 'terminal';
   display_name: string;
+  account_photo: string;
   language: string;
   command_shell: CommandShell;
   audio_profile: AudioProfile;
