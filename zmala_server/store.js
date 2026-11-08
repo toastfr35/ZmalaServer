@@ -189,6 +189,7 @@ class Store {
       account_type: 'terminal',
       call_photo_sharing: true,
       display_name: p.display_name,
+      account_photo: u.photo || '',
       language: p.language || 'en',
       command_shell: p.command_shell || 'powershell',
       audio_profile: p.audio_profile || 'normal',

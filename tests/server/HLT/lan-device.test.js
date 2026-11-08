@@ -1,7 +1,7 @@
 // @test S-HLT-012
 // @requirements HLR-SRV-AUTH-012
 // @environment portable
-// @plan Request device configuration and admin endpoints from LAN-like peers; assert enrollment credentials work while administration still requires a valid admin session.
+// @plan Request device configuration and admin endpoints from LAN-like peers; assert enrollment credentials work, the bearer account receives its own portrait path and administration still requires a valid admin session.
 // @pass All named assertion cases must pass; skips and visual/hardware checks are recorded separately.
 
 'use strict';
@@ -39,9 +39,17 @@ test('LAN terminals can fetch config; administration requires an admin session',
       await handler(req, res);
       return res;
     }
+    fixture.store.updateAccount('term1', {
+      name: 'Family',
+      type: 'terminal',
+      photo: '/photos/aabb.png',
+    });
     const device = fixture.store.value.users.term1.device_token;
-    assert.equal((await request('/api/config', device)).status, 200);
-    assert.equal(JSON.parse((await request('/api/config', device)).body).sip.username, 'term1');
+    const configuration = await request('/api/config', device);
+    assert.equal(configuration.status, 200);
+    const config = JSON.parse(configuration.body);
+    assert.equal(config.sip.username, 'term1');
+    assert.equal(config.account_photo, '/photos/aabb.png');
     assert.equal((await request('/api/config')).status, 401);
     assert.equal((await request('/api/admin', fixture.store.value.admin_token)).status, 401);
     assert.equal((await request('/api/admin', device)).status, 401);

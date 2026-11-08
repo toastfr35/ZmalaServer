@@ -24,6 +24,6 @@ references:
 reviewed: null
 scope: Core
 text: |
-  Device configuration shall contain its own identity, SIP credentials, settings and contact directory. It shall omit other accounts' passwords, tokens and email addresses. Reads and accepted local writes shall return current presence and callbacks.
+  Device configuration shall contain its own identity, SIP credentials, settings and contact directory. It shall omit other accounts' passwords, tokens and email addresses. Full Terminal configuration shall include the authenticated account's own photo path, or an empty string when none is assigned. Reads and accepted local writes shall return current presence and callbacks.
 verification: |
-  Fetch two device configurations and local-write responses. Check secret isolation and consistent live fields.
+  Fetch two device configurations and local-write responses. Check secret isolation, the account-specific portrait path including removal, and consistent live fields.
