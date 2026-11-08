@@ -6,7 +6,7 @@
 from pathlib import Path
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 from tests.support.developer_access import module
 
 
@@ -41,19 +41,24 @@ class DeveloperAccessTests(unittest.TestCase):
 
     def test_exclusive_scoped_rotating_session_and_revocation(self):
         helper = module('developer-access')
-        with tempfile.TemporaryDirectory() as folder, patch.object(helper, 'run') as run, patch.object(helper, 'connected', return_value=False):
+        with tempfile.TemporaryDirectory() as folder, patch.object(helper, 'run', return_value=Mock(stdout='synthetic hash')) as run, patch.object(helper, 'connected', return_value=False):
             helper.STATE = Path(folder) / 'session.json'
             request = {'terminal_id': 'term2', 'device_id': 'serial123', 'host': 'example.test'}
             original_read = Path.read_text
             def read(path, *args, **kwargs):
                 return 'ssh-ed25519 ' + 'a' * 68 if str(path).endswith('ssh_host_ed25519_key.pub') else original_read(path, *args, **kwargs)
             with patch.object(Path, 'read_text', read):
-                public = helper.server('on', request, {})
-                self.assertEqual(public['terminal_id'], 'term2')
-                self.assertNotIn('password', public)
+                admin = helper.server('on', request, {})
+                self.assertEqual(admin['terminal_id'], 'term2')
+                self.assertNotIn('password', admin)
+                self.assertEqual(admin['operator']['username'], 'zmala')
                 private = helper.server('config', request, {})
                 self.assertGreaterEqual(len(private['password']), 40)
-                self.assertNotIn('account_id', private)
+                self.assertNotEqual(admin['operator']['password'], private['password'])
+                self.assertEqual(set(private), helper.TUNNEL_FIELDS)
+                approved = helper.server('config', request | {'operator': True}, {})
+                self.assertEqual(approved, private | {'operator_hash': 'synthetic hash'})
+                self.assertIsNone(helper.server('config', request | {'operator': True, 'device_id': 'other'}, {}))
                 self.assertIsNone(helper.server('config', request | {'terminal_id': 'term1'}, {}))
                 self.assertIsNone(helper.server('config', request | {'device_id': 'other'}, {}))
                 with self.assertRaises(ValueError):
@@ -65,8 +70,9 @@ class DeveloperAccessTests(unittest.TestCase):
                 self.assertEqual(run.call_args_list[0].args, ('systemctl', 'disable', '--now', 'zmalacall-developer.service'))
                 self.assertEqual(run.call_args_list[1].args, ('usermod', '-L', 'terminal'))
                 self.assertFalse(helper.STATE.exists())
-                helper.server('on', request, {})
+                again = helper.server('on', request, {})
                 self.assertNotEqual(private['password'], helper.server('config', request, {})['password'])
+                self.assertNotEqual(admin['operator']['password'], again['operator']['password'])
 
     def test_activation_failure_removes_secret_and_locks_account(self):
         helper = module('developer-access')
@@ -78,6 +84,7 @@ class DeveloperAccessTests(unittest.TestCase):
                 return 'ssh-ed25519 ' + 'a' * 68 if str(path).endswith('ssh_host_ed25519_key.pub') else original_read(path, *args, **kwargs)
             def fail(*args, **kwargs):
                 if args[:2] == ('systemctl','enable'): raise OSError('failure')
+                return Mock(stdout='synthetic hash')
             run.side_effect = fail
             with patch.object(Path, 'read_text', read), self.assertRaises(OSError): helper.server('on',request,{})
             self.assertFalse(helper.STATE.exists())

@@ -12,8 +12,17 @@ const developer = require('../../../zmala_server/developer-access');
 test('developer controls require admin and never expose tunnel credentials', async () => {
   const original = developer.control;
   const calls = [];
+  let active = false;
   developer.control = async (action) => {
     calls.push(action);
+    if (active)
+      return {
+        supported: true,
+        terminal_id: 'term1',
+        connected: true,
+        port: 22001,
+        operator: { username: 'zmala', password: 'fixture-operator' },
+      };
     return { supported: true, terminal_id: null, connected: false, port: 22001 };
   };
   const fixture = await httpFixture();
@@ -44,6 +53,22 @@ test('developer controls require admin and never expose tunnel credentials', asy
       200,
     );
     assert.deepEqual(calls, ['status', 'off']);
+    active = true;
+    const deviceHeaders = {
+      Authorization: 'Bearer ' + fixture.store.value.users.term1.device_token,
+    };
+    assert.equal((await fetch(endpoint, { headers: deviceHeaders })).status, 401);
+    assert.equal(
+      (await fetch(fixture.base + '/api/device/developer-operator', { headers: deviceHeaders }))
+        .status,
+      403,
+    );
+    const enabled = await fetch(endpoint, { headers });
+    assert.equal(enabled.headers.get('cache-control'), 'no-store');
+    assert.deepEqual((await enabled.json()).operator, {
+      username: 'zmala',
+      password: 'fixture-operator',
+    });
   } finally {
     developer.control = original;
     await fixture.close();

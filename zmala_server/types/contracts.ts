@@ -349,7 +349,13 @@ export type AdminModel = ReturnType<StoreInstance['admin']> & {
   callbacks: CallbackView[];
 };
 export type ApiResult<U extends string> = U extends '/api/developer-access'
-  ? { supported: boolean; terminal_id: string | null; connected: boolean; port: number }
+  ? {
+      supported: boolean;
+      terminal_id: string | null;
+      connected: boolean;
+      port: number;
+      operator?: { username: string; password: string } | null;
+    }
   : U extends '/api/auth/status'
     ? { setup_required: boolean; can_setup: boolean }
     : U extends '/api/server/backup/status'

@@ -41,6 +41,10 @@ text: |
   shall restore the restricted tunnel account's volatile password only from a
   valid retained administrator activation; absent or invalid activation shall
   not restore that credential.
+  The authenticated administrator shall see a separate randomly generated
+  operator password for the current activation. Only the bound device may fetch
+  the operator password verifier over HTTPS. Ordinary live configurations shall
+  retain their legacy tunnel fields and exclude the operator password and verifier.
 verification: |
   Exercise authorization, credential scope, process lifecycle and failure paths;
   verify the configured SSH and firewall boundaries and secret cleanup.
