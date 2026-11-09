@@ -22,13 +22,40 @@ references:
   type: file
 reviewed: null
 scope: Experimental
-text: The server shall share one bounded unauthenticated public manifest refresh among
-  concurrent requests, cache successful results for five minutes and back off failed
-  refreshes. It shall accept bounded phase/version/error fields under the authenticated
-  terminal identity, assign receipt time itself, preserve hardware and update reports
-  independently, and expire active maintenance after sixty seconds. Fresh updating/checking/rollback/recovery-failed
-  states shall reject new SIP calls with temporary unavailability.
-verification: Assert shared fetch counts, cache expiry, origin/redirect/size limits,
-  schema validation, server receipt time, maintenance freshness and SIP 480 before
-  dialog forwarding. HTTP tests assert terminal-only authentication and independent
-  report preservation.
+text: |
+  The server shall share one in-flight unauthenticated public manifest refresh
+  among concurrent requests. It shall cache a successful result, including no
+  manifest, for five minutes. A failed refresh shall reject its waiting requests
+  and postpone another refresh for one minute; reads during that backoff shall
+  return the previously cached value, or null before any successful fetch.
+
+  Release metadata shall be limited to 1 MiB and manifest JSON to 65536 bytes.
+  Each fetch shall have a ten-second timeout. Release metadata shall not redirect;
+  manifest fetches shall follow at most three redirects, only to HTTPS
+  github.com/toastfr35/ZmalaTerminal/releases/download/ paths or the
+  release-assets.githubusercontent.com host, without URL user information,
+  fragments or nondefault HTTPS ports. The server shall return the fetched manifest JSON without
+  signing or authorizing it; cryptographic verification remains the Terminal's
+  responsibility.
+
+  Updater status shall come only from the authenticated Terminal, with a request
+  limit of 4096 bytes. Phase shall be idle, request, updating, checking, rollback or
+  recovery_failed. Optional installed/available versions shall be three dot-separated
+  numeric components and at most 32 characters; an optional error shall contain
+  1 through 48 lowercase ASCII letters or underscores. Omitted or null optional
+  fields shall be left out of the stored report. The server shall assign
+  receipt time and preserve hardware and updater reports independently.
+
+  A report shall block new calls involving that Terminal only when its phase is
+  updating, checking, rollback or recovery_failed and its age is from 0 through
+  60000 milliseconds inclusive. Older or future-dated reports and idle/request
+  phases shall not activate this fence. A fenced call shall receive SIP 480 before
+  dialog forwarding; reporting update status shall not change configuration.
+verification: |
+  Use injected clocks and fetch responses to count shared requests, check success
+  and failure cache deadlines, null/stale fallback, byte/time/redirect bounds and
+  credential-free fetches. Validate telemetry field types, enums, lengths and server
+  receipt time. Test maintenance at ages -1, 0, 60000 and 60001 milliseconds and
+  each phase, with SIP 480 before forwarding for either participant. HTTP tests
+  shall assert Terminal-only access and independent hardware/updater preservation.
+  Record actual signature validation and installation as Terminal evidence.

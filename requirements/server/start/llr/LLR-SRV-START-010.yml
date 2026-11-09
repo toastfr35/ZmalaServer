@@ -24,6 +24,18 @@ references:
 reviewed: null
 scope: Core
 text: |
-  GET /health shall return process liveness. GET /ready shall return 503 while any latest application snapshot has an unresolved write failure. It shall return 200 after that failure recovers.
+  Outside restore maintenance and after ordinary HTTP request checks, GET /health shall return HTTP 200
+  with {"ok":true} for process liveness. GET /ready shall return HTTP 503 with
+  {"ok":false,"persistence":false} while any monitored latest application snapshot
+  has an unresolved write failure, and HTTP 200 with
+  {"ok":true,"persistence":true} otherwise. A queued write without a recorded
+  failure shall not by itself make the process unready. Recovery of all failed
+  latest snapshots shall restore readiness. These reads shall not require an
+  administrator/device credential or expose private configuration; liveness shall
+  not imply working peripherals, peer reachability or successful calls.
 verification: |
-  Inject a writer failure, issue both reads and recover the writer. Check bootstrap, callback and console writers as well as configuration.
+  Read both routes without credentials before, during and after an injected
+  latest-snapshot failure. Assert exact statuses/fields and no secret-bearing data.
+  Hold a pending write separately from a failed write. Exercise configuration,
+  bootstrap, callback and console writers, leaving a second writer failed while
+  recovering the first to verify readiness returns only after all failures recover.

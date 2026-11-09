@@ -16,6 +16,14 @@ references:
 reviewed: null
 scope: Core
 text: |
-  Forwarded text shall use the recipient's current registration flow. A token-derived proof shall replace supplied sender proof and bind sender and message identity. Activity records shall omit text bodies.
+  Forwarded text shall use the recipient's current registration flow.
+  X-Zmala-Message-Id shall be the incoming Call-ID followed by a colon and the
+  base-10 CSeq number. X-Family-Auth shall be replaced with lowercase hexadecimal
+  HMAC-SHA256, keyed by the receiving Terminal's device token, over the UTF-8 string
+  message:MESSAGE_ID:FROM_ACCOUNT. Authorization and Proxy-Authorization headers
+  from the sender shall be removed. Activity records shall omit the text body.
 verification: |
-  Inspect forwarded flow, stripped authentication headers, independently calculated proof and retained activity content.
+  Inspect the forwarded route, message ID and removed caller-authentication
+  headers. Independently calculate the exact HMAC for the recipient and assert a
+  caller-supplied proof is replaced. Compare different recipient keys and message
+  identities, and inspect retained activity to ensure it omits the body.

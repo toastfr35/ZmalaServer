@@ -22,6 +22,15 @@ references:
 reviewed: null
 scope: Core
 text: |
-  Administration shall accept sh and bash as terminal command shells and retain the supported legacy shell choices. Unknown choices shall be rejected. Each command shall retain the selected shell for the terminal to validate and execute.
+  Administration shall accept the exact shell values sh and bash, plus the retained
+  legacy values powershell, pwsh and cmd. Values outside that enumeration shall be
+  rejected before changing the profile. Queuing a command shall capture the selected
+  shell; a subsequent profile edit shall not change the queued command. Accepting a
+  stored shell value shall not imply that the target Terminal can execute it:
+  execution compatibility shall remain the Terminal's responsibility.
 verification: |
-  Save each supported enumeration and reject unknown values. Check captured job shells; execution compatibility belongs to the terminal.
+  Save each accepted shell and reject empty, null, non-string and unknown values
+  without changing the profile or revision. Queue a command with sh, change the
+  profile to bash, then claim the command and verify it still specifies sh. Check
+  that legacy saved shell values remain representable without claiming Pi support
+  for executing Windows shells.

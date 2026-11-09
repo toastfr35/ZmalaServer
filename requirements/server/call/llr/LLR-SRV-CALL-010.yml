@@ -24,6 +24,26 @@ references:
 reviewed: null
 scope: Core
 text: |
-  SIP framing shall reject malformed, duplicate and excessive Content-Length fields and expire incomplete messages after 30 seconds. ACK shall retain no proxy context. Other contexts shall have per-peer and global limits and a 90-second lifetime.
+  For TCP and TLS SIP streams, framing shall accept at most 60480 header bytes
+  including the terminating CRLF-CRLF separator and at most 604800 body bytes by default.
+  Each message shall contain exactly one Content-Length field, accepting its compact
+  name l; its value shall be a nonnegative decimal safe integer within the body
+  limit. Missing, duplicate, malformed or oversized lengths and oversized headers
+  shall reject the stream without delivering the invalid message. An incomplete
+  message shall expire after 30 seconds without extending that deadline when more
+  partial data arrives. Inter-message CRLF keepalives shall not retain an incomplete
+  message timer.
+
+  ACK shall retain no proxy request context. Other requests shall retain at most
+  128 contexts per transport-protocol/source-IP pair, independent of source port,
+  and 2048 contexts globally. A new context beyond either limit shall receive SIP
+  503 without routing the request. Each retained context shall expire after 90
+  seconds from creation or replacement; release and server stop shall free its
+  quota and timer.
 verification: |
-  Feed fragments, pipelines and malformed lengths. Exhaust proxy quotas, advance deadlines and inspect context cleanup.
+  Feed fragmented and pipelined stream messages, missing/duplicate/invalid lengths,
+  headers and bodies at and above their limits, and idle CRLF keepalives. Advance the
+  incomplete-message deadline while adding fragments; verify no invalid delivery or
+  retained input after rejection. Fill the peer and global quotas independently,
+  including changed source ports, and assert 503 without routing. Send repeated
+  ACKs, expire contexts and stop the proxy; check freed quotas and timers.
