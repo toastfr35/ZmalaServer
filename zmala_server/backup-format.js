@@ -112,10 +112,11 @@ function validateFiles(files) {
           profile.ringtone === 'nokia' ||
           Object.hasOwn(ringtones, profile.ringtone),
       );
-      terminalProfileFields(/** @type {import('./types/contracts').TerminalProfile} */ (profile), {
-        ...profile,
-        ...object(profile.terminal_settings),
-      });
+      terminalProfileFields(
+        /** @type {import('./types/contracts').TerminalProfile} */ (profile),
+        { ...profile, ...object(profile.terminal_settings) },
+        user.device_id,
+      );
     } else requireValue(!Object.hasOwn(profiles, id));
   }
   for (const id of Object.keys(profiles))

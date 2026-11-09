@@ -20,6 +20,6 @@ references:
 reviewed: null
 scope: Core
 text: |
-  Registration shall authenticate matching From and To account identities and retain one current Contact with its actual UDP or TCP flow. Numeric expiry shall be limited to 0 through 600 seconds. Missing Contact shall query state; zero expiry or wildcard Contact shall deregister it. Nonnumeric expiry shall be rejected.
+  Registration shall authenticate matching From and To account identities and retain one current Contact with its actual transport flow: UDP or TCP in LAN mode, or TLS in secure relay mode under LLR-SRV-MEDIA-015. Numeric expiry shall be limited to 0 through 600 seconds. Missing Contact shall query state; zero expiry or wildcard Contact shall deregister it. Nonnumeric expiry shall be rejected.
 verification: |
   Register, query, replace and remove UDP/TCP contacts. Check identity mismatch, expiry bounds and recorded network flow.

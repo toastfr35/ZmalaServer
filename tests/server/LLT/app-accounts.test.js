@@ -1,5 +1,5 @@
 // @test S-LLT-040
-// @requirements LLR-SRV-APP-002, LLR-SRV-APP-003
+// @requirements LLR-SRV-APP-002, LLR-SRV-APP-003, LLR-SRV-AUTH-020
 // @environment portable
 // @plan Create and convert app accounts, compare credentials and profile ownership, migrate a schema-six Linphone account twice, then inspect app QR and filtered configuration for credential and Pi-setting isolation.
 // @pass Every conversion, migration, rejection and private-view assertion passes without using live accounts.

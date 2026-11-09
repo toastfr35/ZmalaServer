@@ -1,7 +1,7 @@
 // @test S-LLT-025
 // @requirements LLR-SRV-START-005, LLR-SRV-PRESENCE-002, LLR-SRV-CALL-005, LLR-SRV-MAINT-020
 // @environment portable
-// @plan Replace SIP transport with a capture double; check default/configured UDP/TCP binding options, destination-specific HMAC replacement, authenticated registration identity, expiry/query/deregistration transitions and bounded recent activity history.
+// @plan Replace SIP transport with a capture double; check default/configured UDP/TCP binding options, Terminal and App recipient-specific HMAC replacement and stripped caller credentials, authenticated registration identity, expiry/query/deregistration transitions and bounded recent activity history.
 // @pass All signaling assertions must pass without binding sockets or sending packets to real devices.
 
 'use strict';
@@ -86,7 +86,7 @@ test('activity retains only the newest eighty events', (t) => {
   assert.equal(s.events.at(-1).message, 'event-99');
 });
 
-test('SIP routing enforces groups and authenticates every terminal recipient', async () => {
+test('SIP routing enforces groups and authenticates Terminal and App recipients', async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'family-routing-')),
     send = proxy.send,
     encodeFlowUri = sip.encodeFlowUri;
@@ -129,6 +129,8 @@ test('SIP routing enforces groups and authenticates every terminal recipient', a
         'call-id': 'test-' + to,
         contact: [{ uri: 'sip:alice@127.0.0.1:50001' }],
         'x-family-auth': 'forged',
+        authorization: { fixture: 'caller credential' },
+        'proxy-authorization': { fixture: 'caller proxy credential' },
       },
       content: '',
     });
@@ -138,6 +140,8 @@ test('SIP routing enforces groups and authenticates every terminal recipient', a
     await server.request(request('bob'), peer);
     const phone = sent.pop();
     assert.equal(phone.method, 'INVITE');
+    assert.equal(phone.headers.authorization, undefined);
+    assert.equal(phone.headers['proxy-authorization'], undefined);
     assert.equal(
       phone.headers['x-family-auth'],
       crypto
@@ -150,6 +154,8 @@ test('SIP routing enforces groups and authenticates every terminal recipient', a
     server.dialogs.clear();
     await server.request(request('lounge'), peer);
     const terminal = sent.pop();
+    assert.equal(terminal.headers.authorization, undefined);
+    assert.equal(terminal.headers['proxy-authorization'], undefined);
     const proof = crypto
       .createHmac('sha256', s.value.users.lounge.device_token)
       .update('test-lounge:alice')
