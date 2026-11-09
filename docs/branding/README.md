@@ -1,31 +1,17 @@
-# Zmala logo pack
+# Server branding
 
-A1 is the main Zmala brand. A3 is the compact phone app mark.
+The [shared Zmala branding pack](https://github.com/toastfr35/Zmala/tree/main/docs/branding)
+owns the approved masters, exports, previews, dimensions and generation prompts.
+Update that source when changing the brand. The Server retains the three assets
+used by its interface and generated documents:
 
-## Files
+| Use | Runtime asset |
+| --- | --- |
+| Administration favicon and navigation mark | [A1 dark SVG](../../zmala_server/assets/zmala-icon.svg), with its PNG embedded |
+| Overview banner | [Transparent A1 mark](../../zmala_server/assets/zmala-mark-transparent.png) |
+| Setup PDFs and release-guide footers | [A1 light mark](../../zmala_server/assets/zmala-icon-light.png) |
 
-PNG contains 18 exports:
-
-- A1 with the Zmala wordmark, on light and dark backgrounds, at 256, 512 and 1024 pixels wide.
-- A1 without the wordmark, on light and dark backgrounds, at 256, 512 and 1024 pixels square.
-- A3 without text, on light and dark backgrounds, at 256, 512 and 1024 pixels square.
-
-Wordmark exports preserve the master aspect ratio; exact dimensions are in sizes.json.
-Masters contains the six full-resolution PNG masters.
-Preview.png compares all six versions. Android-mask-preview.png shows the dark app icon under square, circle and rounded-square masks.
-
-## Recommended use
-
-The Overview banner uses the transparent A1 mark shared with ZmalaTerminal
-in the Terminal repository. Its alpha channel lets the banner gradient show through.
-
-Use A1 for the website, terminal, administration and documents. Choose the light or dark version to match its surroundings.
-Use A3 on a consistent dark navy background for the phone app. It keeps the purple/green mark readable on both light and dark home screens. The light app version is supplied for comparison.
-App exports have no wordmark or pre-rounded outer corners and include padding for launcher masks. These are artwork exports, not an installed Android adaptive-icon resource set.
-
-These variants retain the white Z within the mark. Light backgrounds use a dark wordmark; dark backgrounds use a near-white wordmark.
-The intended palette is navy #172033, lavender #AA91F0 and mint #55BA91. Generated masters retain subtle raster shading from the approved drafts.
-
-Generated using the built-in image tool from the approved A1 and A3 drafts. generation-prompts.json records the six edit prompts. PNG exports were resized from those masters without redesigning the artwork.
-
-The [shared transparent A1 mark](https://github.com/toastfr35/Zmala/blob/main/docs/branding/PNG/a1-mark-transparent-256.png) supplies the Server welcome logo. A1 dark supplies the favicon, and A1 light supplies document marks. The favicon SVG embeds its PNG so its existing URL stays self-contained.
+The palette is navy `#172033`, lavender `#AA91F0` and mint `#55BA91`.
+Keep the runtime assets synchronized with approved shared artwork. Verify the
+administration and PDF rendering when replacing them. The A3 phone icon and
+Terminal boot artwork belong to their respective components.

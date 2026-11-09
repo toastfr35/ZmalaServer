@@ -21,8 +21,7 @@ async function runtimeProcess(t, overrides = {}) {
   const serverRoot = path.join(directory, 'zmala_server');
   await fs.cp(path.join(root, 'zmala_server'), serverRoot, {
     recursive: true,
-    filter: (source) =>
-      !['node_modules', 'data', 'test-portraits', '__pycache__'].includes(path.basename(source)),
+    filter: (source) => !['node_modules', 'data', '__pycache__'].includes(path.basename(source)),
   });
   await fs.symlink(
     path.join(root, 'zmala_server/node_modules'),

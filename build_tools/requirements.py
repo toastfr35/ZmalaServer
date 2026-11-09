@@ -27,36 +27,24 @@ SOURCE_ROOTS = ('zmala_server', 'build_tools/linux')
 SOURCE_FILES = ('build_tools/convert-photo.py',)
 SOURCE_SUFFIXES = {'.py', '.js', '.ts', '.c', '.h', '.css', '.html', '.json', '.sh',
                    '.service', '.conf', '.rules', '.script', '.plymouth', '.kt', '.java', '.xml'}
-INSTALLER_HELPERS = {
-    'boot-branding.py', 'build-turn.py', 'build-media.sh', 'check-low-wear.py', 'check-server.py',
-    'download-framing-model.py', 'setup-auto-framing.sh',
-}
+INSTALLER_HELPERS = {'check-server.py'}
 
 
 def installer_source(name: str) -> bool:
     """Deployment clients/build steps are outside the Pi runtime baseline."""
-    return (name.startswith(('build_tools/windows_installer/', 'build_tools/server_installer/'))
-            or (name.startswith('build_tools/linux/')
-                and (Path(name).name.startswith(('install-', 'package-'))
-                     or Path(name).name in INSTALLER_HELPERS)))
+    return (name.startswith('build_tools/linux/')
+            and (Path(name).name.startswith(('install-', 'package-'))
+                 or Path(name).name in INSTALLER_HELPERS))
 
 
 EXCLUSIONS = {
     'build_tools/linux/zmalacall-ssh-guard.service': 'Imported host integration payload. See requirements/ownership.json and the component source repository.',
-    'build_tools/linux/tv_test_camera.py': 'Camera child for the opt-in developer evidence tool; covered by ad-hoc regressions.',
-    'build_tools/linux/tv_test_processes.py': 'Helper cleanup for the opt-in developer evidence tool; covered by ad-hoc regressions.',
-    'build_tools/linux/tv-plugin-self-test.sh': 'Installed wrapper for the internal opt-in TV qualification tool; installer regressions cover packaging.',
-    'build_tools/linux/tv-plugin-self-test.py': 'Opt-in developer experiment/evidence CLI; not a terminal runtime behavior. Regression tests live in tests/adhoc/test_tv_plugin_self_test.py.',
-    'build_tools/linux/tv_plugin_self_test.py': 'Internal opt-in TV experiment/report tool; development-tool regressions are outside the runtime baseline.',
-    'build_tools/linux/tv_test_card.py': 'Internal HDMI test pattern for opt-in TV qualification; not normal terminal UI.',
-    'zmala_phone/app/src/main/assets/licenses/SDK-SOURCES.json': 'Packaged dependency source provenance, not runtime configuration.',
     'zmala_server/web/admin.js': 'Generated bundle; authored admin modules are mapped.',
     'zmala_server/web/admin.css': 'Generated bundle; authored stylesheets are mapped.',
     'zmala_server/package.json': 'Dependency/build metadata, not an application behavior.',
     'zmala_server/package-lock.json': 'Dependency lockfile.',
     'zmala_server/tsconfig.json': 'Static type-check configuration.',
     'zmala_server/tsconfig.admin.json': 'Static type-check configuration.',
-    'zmala_server/assets/test-portraits/accounts.json': 'Synthetic demo fixture, not live accounts.',
 }
 
 

@@ -1,8 +1,9 @@
 # Zmala Server implementation
 
 The administration uses A1 dark; setup PDFs and guide footers use A1 light.
-Approved source artwork is retained in `docs/branding/`; runtime copies are
-under `zmala_server/assets/`. Keep those copies consistent when changing branding.
+The [branding notes](branding/README.md) identify the shared artwork owner and
+the runtime assets under `zmala_server/assets/`. Keep them consistent when
+changing branding.
 
 This guide describes the Linux server's deployment, request boundaries, identities,
 SIP/media lifecycle and persistence. It is intended for developers and maintainers.

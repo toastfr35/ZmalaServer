@@ -24,9 +24,9 @@ def package(destination=None):
     paths = [ROOT/name for name in tracked.decode().split('\0') if name]
     paths += [ROOT / 'build_tools/linux' / name for name in SCRIPTS]
     paths += [ROOT / 'build_tools' / name for name in ('build-admin.cjs', 'convert-photo.py')]
-    paths += sorted((ROOT/'vendor/terminal-contracts').glob('*'))
+    paths += [ROOT/'vendor/terminal-contracts'/name
+              for name in ('terminal-languages.json', 'gentle-chime.wav')]
     paths += [ROOT/'docs'/name for name in ('general.md', 'server.md')]
-    paths.append(ROOT/'build_tools/assets/installation-connections.png')
     checksums = []
     with tarfile.open(destination, 'w:gz') as archive:
         def add(name, data, mode=0o644):
