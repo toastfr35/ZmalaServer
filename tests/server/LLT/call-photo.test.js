@@ -153,15 +153,18 @@ test('two global decoder slots reject a third call and recover after a failed co
     third = fixture();
   const gates = [Promise.withResolvers(), Promise.withResolvers()];
   const started = [Promise.withResolvers(), Promise.withResolvers()];
-  const uploads = [first, second].map((f, i) =>
+  const start = (f, i) =>
     f.invoke('PUT', 'app', '', Buffer.from('image'), () => {
       started[i].resolve();
       return gates[i].promise;
-    }),
-  );
+    });
+  const uploads = [start(first, 0)];
   try {
-    await Promise.all(started.map((gate) => gate.promise));
+    await started[0].promise;
+    // Exercise the per-dialog limit while the second global slot is still free.
     await assert.rejects(first.invoke('PUT'), { status: 429 });
+    uploads.push(start(second, 1));
+    await started[1].promise;
     await assert.rejects(third.invoke('PUT'), { status: 429 });
     const rejected = assert.rejects(uploads[0], /decode failed/);
     gates[0].reject(Error('decode failed'));
