@@ -25,8 +25,6 @@ build_tools/dist/
 *.bak
 *.tmp
 ~$*.docx
-/zmala_terminal/linux/media/framing-runtime/
-/zmala_terminal/linux/media/models/*.tflite
 
 # Keep local configuration and credentials out of commits.
 .env
@@ -46,15 +44,5 @@ build_tools/dist/
 # Generated requirement-based execution coverage.
 /tests/coverage/
 
-# Native TURN correction and retained upstream build sources
-zmala_terminal/linux/turn-runtime/
-
-# Android machine configuration and generated outputs.
-/zmala_phone/.gradle/
-/zmala_phone/**/build/
-/zmala_phone/local.properties
-/zmala_phone/.idea/
-
-# Firebase application configuration and server credentials remain local.
-/zmala_phone/app/google-services.json
+# Firebase server credentials remain local.
 **/*service-account*.json

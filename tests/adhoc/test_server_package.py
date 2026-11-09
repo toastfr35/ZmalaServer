@@ -26,10 +26,18 @@ class ServerPackageTests(unittest.TestCase):
                 self.assertEqual(len(names), len(members))
                 self.assertTrue(all(member.isfile() for member in members))
                 self.assertTrue({'install.sh', 'zmala_server/main.js', 'build_tools/linux/install-server.sh',
+                                 'zmala_server/assets/zmala-icon.svg',
+                                 'zmala_server/assets/zmala-icon-light.png',
+                                 'zmala_server/assets/zmala-mark-transparent.png',
                                  'vendor/terminal-contracts/terminal-languages.json',
                                  'vendor/terminal-contracts/gentle-chime.wav'} <= names)
                 self.assertFalse(any(set(Path(name).parts) & {'data', 'node_modules', 'zmala_terminal',
-                                                             'zmala_phone', '.env'} for name in names))
+                                                             'zmala_phone', '.env', 'test-portraits'}
+                                     for name in names))
+                self.assertEqual({name for name in names if name.startswith('vendor/terminal-contracts/')},
+                                 {'vendor/terminal-contracts/terminal-languages.json',
+                                  'vendor/terminal-contracts/gentle-chime.wav'})
+                self.assertNotIn('build_tools/assets/installation-connections.png', names)
                 manifest = json.load(archive.extractfile('ZMALA-COMPONENT.json'))
                 expected = json.loads((ROOT/'VERSION.json').read_text())
                 commit = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()
