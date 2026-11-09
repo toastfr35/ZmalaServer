@@ -55,5 +55,7 @@ verification: |
   global and per-dialog decoder contention and slot recovery after failure. With a
   controlled clock, inspect the exact lease, renew current versus stale revisions,
   expire at the deadline and verify old image revisions are inaccessible. Delay
-  conversion across stop, call closure and either enrollment's replacement; assert
-  no late publication or media negotiation. Verify status fields and capability flags.
+  upload arrival and conversion across stop, call closure and either enrollment's
+  replacement; assert obsolete uploads do not start conversion, no late publication
+  or media negotiation occurs, and processing slots recover. Verify status fields,
+  zero remaining lease during a pending replacement and capability flags.

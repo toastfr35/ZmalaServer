@@ -14,6 +14,8 @@ class ContactDirectory {
     this.permissions = new Map();
     /** @type {Map<string, ReturnType<ContactDirectory['buildContacts']>>} */
     this.contactViews = new Map();
+    /** @type {string[] | null} */
+    this.accountOrder = null;
   }
   // @llr LLR-SRV-DIR-030
   /** @param {unknown} from @param {unknown} to */
@@ -30,16 +32,18 @@ class ContactDirectory {
   }
   // @llr LLR-SRV-DIR-032
   derivedPermissions() {
-    if (this.viewVersion !== this.readState().configuration_version) {
+    const state = this.readState();
+    if (this.viewVersion !== state.configuration_version) {
       this.permissions.clear();
       this.contactViews.clear();
-      for (const group of Object.values(this.readState().groups))
+      this.accountOrder = null;
+      for (const group of Object.values(state.groups))
         for (const from of group.members) {
           const peers = this.permissions.get(from) || new Set();
           for (const to of group.members) if (from !== to) peers.add(to);
           this.permissions.set(from, peers);
         }
-      this.viewVersion = this.readState().configuration_version;
+      this.viewVersion = state.configuration_version;
     }
     return this.permissions;
   }
@@ -55,11 +59,16 @@ class ContactDirectory {
   // @llr LLR-SRV-DIR-031
   /** @param {string} id */
   buildContacts(id) {
+    this.derivedPermissions();
     const v = this.readState(),
       collator = this.collator;
-    return Object.keys(v.users)
+    // Every device uses the same ordering. Sort once per revision, then omit
+    // the caller and derive its permission flags without sorting again.
+    const ordered = (this.accountOrder ||= Object.keys(v.users).sort(
+      (a, b) => collator.compare(v.users[a].name, v.users[b].name) || a.localeCompare(b),
+    ));
+    return ordered
       .filter((key) => key !== id)
-      .sort((a, b) => collator.compare(v.users[a].name, v.users[b].name) || a.localeCompare(b))
       .map((key) => {
         const u = v.users[key],
           incoming = this.permitted(key, id);

@@ -111,12 +111,19 @@ async function callPhotoRoute(req, res, url, context, convert = normalize) {
   decoding++;
   const revision = ++state.revision;
   state.bytes = null;
+  state.expires = 0;
+  const assertCurrent = () => {
+    if (!current() || state.revision !== revision)
+      throw httpError(409, 'Photo sharing was cancelled.');
+  };
   try {
     const bytes = await body(req, MAX_BYTES);
     if (!bytes.length) throw httpError(400, 'Choose a photo.');
+    // A slow upload may outlive Stop, the call or either enrollment. Avoid
+    // starting a decoder for obsolete work, then recheck before publishing it.
+    assertCurrent();
     const photo = await convert(bytes);
-    if (!current() || state.revision !== revision)
-      throw httpError(409, 'Photo sharing was cancelled.');
+    assertCurrent();
     state.bytes = photo;
     state.expires = Date.now() + LEASE_MS;
     return send(res, 200, status());
