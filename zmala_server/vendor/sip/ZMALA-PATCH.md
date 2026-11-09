@@ -21,7 +21,7 @@ The stream parser additionally requires one finite, unsigned integer
 Content-Length (including compact `l`), bounds headers/body, and closes an
 unfinished message after 30 seconds. Duplicate lengths are rejected. CRLF
 keepalives between messages and pipelining remain supported; transport closure
-clears the parser deadline. `tests/sip-bounds.test.js` covers malformed lengths,
+clears the parser deadline. [`sip-bounds.test.js`](../../../tests/server/LLT/sip-bounds.test.js) covers malformed lengths,
 fragments, keepalives and the absolute body deadline.
 
 `proxy.js` bypasses response contexts for ACK, caps outstanding contexts at 128
@@ -41,7 +41,7 @@ is unchanged.
 The server installs this as `file:vendor/sip`, including with `npm ci
 --ignore-scripts`; no postinstall patching or edits to installed dependencies
 are needed. Application lint/format checks exclude these third-party files.
-`tests/sip-cancel-wire.test.js` exercises the patch over real UDP, including a
+[`sip-cancel-wire.test.js`](../../../tests/server/HLT/sip-cancel-wire.test.js) exercises the patch over real UDP, including a
 forged CANCEL followed by the legitimate cancellation on the same transaction.
 
 When updating upstream, compare these files to the recorded originals, reapply

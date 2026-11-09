@@ -12,13 +12,13 @@ Node server and browser administration. The entry point is `main.js`.
 Run `npm run build:admin` after editing browser source. Runtime deployment and image assembly remain outside this directory.
 
 Read the [implementation guide](../docs/server.md) and
-[development setup](../docs/development.md). Product requirements are in
+[development setup](../docs/general.md). Product requirements are in
 [`requirements/server/`](../requirements/server/); unit and system plans are in
 [`tests/server/`](../tests/server/).
 
 Run from the repository root after installing the development dependencies:
 
 ```sh
-make test
+make lint test-llt test-hlt test-adhoc
 make requirements
 ```
