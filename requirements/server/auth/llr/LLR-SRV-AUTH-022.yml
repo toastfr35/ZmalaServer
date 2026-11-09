@@ -24,6 +24,17 @@ references:
 reviewed: null
 scope: Core
 text: |
-  JSON routes shall enforce their byte limit and accept only an object. Malformed JSON, arrays, null and excessive bodies shall fail before mutation. Errors shall use structured JSON responses.
+  Routes that parse a JSON request body shall count received bytes against their
+  route-specific limit before applying a mutation. Bodies at the limit shall remain
+  eligible; a body exceeding it shall fail with HTTP 413. Parsed values shall be
+  non-null objects, excluding arrays; malformed JSON or any other top-level value
+  shall fail with HTTP 400. An empty body shall fail unless the route explicitly
+  permits it as an empty object. These rejections shall leave accepted application
+  configuration and owned records unchanged and return a JSON object with an error string. Peer-route byte limits
+  shall follow the corresponding interface contract.
 verification: |
-  Send malformed and excessive bodies to routes with different limits. Verify no change to accepted state.
+  For representative route limits, submit object bodies at the limit and one byte
+  over, including multibyte text so byte counts differ from string length. Submit
+  malformed JSON, arrays, null, strings, numbers and booleans; assert 400 or 413,
+  an error string and unchanged state. Check empty-body rejection and the explicit
+  empty-object compatibility path separately.

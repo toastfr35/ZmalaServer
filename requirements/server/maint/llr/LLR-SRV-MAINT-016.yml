@@ -24,6 +24,23 @@ references:
 reviewed: null
 scope: Core
 text: |
-  Results shall validate status, exit code, output strings and truncation state. Combined stdout and stderr shall not exceed 65536 UTF-8 bytes; result JSON shall not exceed 400000 bytes. A repeated completed lease shall retry persistence without changing its recorded result.
+  A command result shall belong to the authenticated device serial and match the
+  job's saved lease under LLR-SRV-MAINT-014. A first result for a running or lost job
+  shall accept only status completed, failed, timed_out or cancelled; exit_code
+  shall be an integer or null, stdout and stderr strings, and truncated boolean.
+  Combined stdout and stderr shall not exceed 65536 UTF-8 bytes; the HTTP result
+  JSON shall not exceed 400000 bytes. Invalid first results shall leave the job
+  unchanged.
+
+  Once a result is recorded with one of those terminal statuses, a retry with the
+  same valid lease shall acknowledge that recorded result without replacing its
+  fields, finished timestamp or status. The result route shall wait for persistence,
+  including on a retry after a failed write, before returning success. A late result
+  shall not cause a lost command to execute again.
 verification: |
-  Use multibyte and escaped output at bounds. Submit invalid results and repeat a completed lease after a failed write.
+  Check every result status/type and foreign device or lease rejection. Use
+  multibyte and JSON-escaped output at the decoded and request-byte boundaries.
+  Verify malformed first results leave a running job unchanged. Complete a job,
+  resubmit different output under the same lease and verify the original result
+  remains. Inject persistence failure then retry and check acknowledgement only
+  after recovery; submit a valid late result to a lost job without re-queuing it.

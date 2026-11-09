@@ -18,6 +18,22 @@ references:
 reviewed: null
 scope: Core
 text: |
-  Wi-Fi codes shall validate SSID, WPA or open security, password and hidden status. SSIDs shall contain 1 to 32 UTF-8 bytes without control characters. Standard codes shall escape reserved characters. Non-ASCII or excessive standard payloads shall use the versioned compact encoding. Submitted Wi-Fi secrets shall not be saved.
+  Wi-Fi setup shall accept an SSID containing 1 through 32 UTF-8 bytes, excluding
+  U+0000 through U+001F and U+007F. Security shall be WPA (the default) or nopass;
+  hidden shall be boolean and default to false. WPA passwords shall contain either
+  8 through 63 printable ASCII characters or exactly 64 hexadecimal digits. An open
+  network shall have an empty password. Invalid input shall fail before generating
+  the setup document.
+
+  The standard WIFI payload shall escape backslash, semicolon, comma, colon and
+  double quote. It shall be used when the complete escaped valid payload is ASCII;
+  other valid inputs shall use FAMILY-WIFI:1: compact
+  encoding as defined in the Terminal-Server interface contract. Submitted Wi-Fi
+  secrets shall not be persisted in application state.
 verification: |
-  Exercise Unicode, escaped characters, open networks, password limits and hidden status. Compare server files before and after PDF generation.
+  Exercise SSID limits in UTF-8 bytes, control characters, each security value,
+  password lengths 7/8/63/64/65, 64-digit hex versus non-hex passwords, and boolean
+  versus invalid hidden flags. Check open networks with empty and nonempty passwords.
+  Verify the longest admitted escaped ASCII inputs remain standard WIFI payloads
+  and non-ASCII inputs use compact encoding. Decode compact fields and compare
+  application files before and after generation.

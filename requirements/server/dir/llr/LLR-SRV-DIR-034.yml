@@ -18,6 +18,15 @@ references:
 reviewed: null
 scope: Core
 text: |
-  Portrait processing shall admit at most ten uploads and run at most two converters. Excess work shall receive an error. Concurrent identical inputs shall share conversion work.
+  Portrait processing shall admit at most ten outstanding upload requests,
+  including requests reading input, waiting for conversion or awaiting publication.
+  An additional upload shall receive HTTP 429 without starting a converter. At most
+  two converters shall run concurrently. Concurrent uploads with identical input
+  bytes shall share one conversion operation while each request still counts
+  against the upload limit. Success and failure shall release their admission and
+  conversion slots so subsequent uploads can proceed.
 verification: |
-  Hold converter completion, submit a burst and duplicate inputs, and inspect admission and concurrent worker counts.
+  Hold conversion completion and submit ten distinct uploads; verify at most two
+  converters run and the eleventh request receives 429. Repeat with identical inputs
+  and verify a shared conversion. Release or fail the work and assert the counters
+  and pending maps clear, temporary files are removed and another upload succeeds.

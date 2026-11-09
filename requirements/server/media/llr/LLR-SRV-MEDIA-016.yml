@@ -9,14 +9,33 @@ ref: ''
 reviewed: null
 area: In-call photo sharing
 scope: Core
-text: The server shall expose temporary call photos only to authenticated enrolled peers of a connected
-  App/Terminal or App/App dialog. Either App peer may claim an idle share; only its sender may renew or stop it. Concurrent claims shall be rejected until the current share stops or expires. Uploads shall be limited to
-  2 MiB and JPEG/PNG with at most 16 million decoded pixels, normalized to an oriented metadata-free JPEG
-  of at most 1600 pixels per side. At most two uploads may decode concurrently and one per dialog. Stop
-  and expired sender leases shall invalidate the image revision; call closure shall release dialog-owned
-  bytes. Asynchronous upload completion shall recheck dialog identity, enrollment and revision. Photo
-  operations shall not change voice/media negotiation. Configuration shall advertise support and app contact
-  device types.
+text: |
+  The server shall expose temporary call photos only to authenticated enrolled
+  participants in a connected App/Terminal or App/App dialog. Either App may claim
+  an idle share. While it owns the share, only that sender shall upload a replacement,
+  renew or stop it; another App shall receive HTTP 409 and a Terminal shall receive
+  403 for mutations. Status and image reads shall be available to either participant.
+
+  Nonempty uploads shall be JPEG/PNG of at most 2 MiB and 16000000 decoded pixels.
+  Normalization shall produce an oriented, metadata-free JPEG of at most 1600 pixels
+  per side and 2 MiB. At most two uploads shall decode concurrently across the
+  server and one per dialog; decoder contention shall return HTTP 429. Failed work
+  shall release its processing slot.
+
+  A successful upload shall start a 12000-millisecond sender lease. Renewal shall
+  extend it to 12000 milliseconds from the renewal only when bytes are still active
+  and the requested revision equals the current revision. A stale renewal shall
+  return the current status without extending or resurrecting the share. Image reads
+  shall require the exact active revision and otherwise return HTTP 404. Stop or
+  lease expiry shall invalidate image access and advance the revision; call closure
+  shall also release dialog-owned bytes. Status shall include revision, sharing,
+  sender, lease_ms and nonnegative remaining_ms.
+
+  Asynchronous upload completion shall recheck the owning dialog, both enrollment
+  credentials and revision before publishing. Photo operations shall not alter SIP
+  or voice/media negotiation. Configuration shall advertise sharing support and App
+  contact account types. Call-photo bytes shall remain separate from the persistent
+  contact portrait store.
 references:
 - path: zmala_server/sip-server.js
   type: file
@@ -30,6 +49,11 @@ references:
   type: file
 - path: tests/server/LLT/test_call_photo.py
   type: file
-verification: Exercise exact participant and role authorization, connected-state gating, upload bounds,
-  normalization/orientation, lease expiry and stop/end/enrollment races with delayed decoding. Verify
-  configuration capability and contact types. Inspect dialog-owned storage separately from public portraits.
+verification: |
+  Exercise both App ownership directions, Terminal read-only access, strangers and
+  unconnected dialogs. Check byte/pixel/dimension bounds, normalized image metadata,
+  global and per-dialog decoder contention and slot recovery after failure. With a
+  controlled clock, inspect the exact lease, renew current versus stale revisions,
+  expire at the deadline and verify old image revisions are inaccessible. Delay
+  conversion across stop, call closure and either enrollment's replacement; assert
+  no late publication or media negotiation. Verify status fields and capability flags.

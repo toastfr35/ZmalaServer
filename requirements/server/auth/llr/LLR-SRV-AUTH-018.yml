@@ -26,6 +26,15 @@ references:
 reviewed: null
 scope: Core
 text: |
-  A one-minute login window shall allow at most five attempts per address and thirty attempts globally. Excess attempts shall receive an explicit retry response. Expired address counters shall be removed.
+  Administrator setup, login and password-change attempts admitted to password
+  processing shall share a limiter with at most five attempts per TCP peer address
+  and thirty attempts globally in their respective 60-second windows. A window
+  shall start with its first admitted attempt after expiry. Rejected attempts shall
+  not perform password hashing or verification and shall return HTTP 429 with
+  Retry-After: 60. Expired per-address counters shall be removed when the limiter
+  is next evaluated; forwarded address headers shall not select the counter.
 verification: |
-  Exercise both limits, many addresses and window expiry. Confirm rejected attempts do not perform password hashing.
+  Admit five attempts from one address and reject its sixth; admit thirty across
+  addresses and reject the next. Advance each window to its expiry and verify
+  admission resumes and expired counters disappear. Exercise the HTTP auth route
+  and assert 429, Retry-After: 60 and no password-processing call on rejection.

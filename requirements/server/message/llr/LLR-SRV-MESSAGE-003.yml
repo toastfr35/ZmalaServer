@@ -16,6 +16,20 @@ references:
 reviewed: null
 scope: Core
 text: |
-  Text notifications shall use nonempty text/plain or message/cpim content of at most 16384 JavaScript UTF-16 code units. The server shall validate message identity, sequence and hop count before forwarding.
+  Text notifications shall use text/plain or message/cpim, matching the media type
+  case-insensitively and allowing parameters. Unsupported media types shall receive
+  SIP 415. The body shall be a string containing non-whitespace text and no more than
+  16384 JavaScript UTF-16 code units; blank or missing text shall receive 400 and an
+  oversized body 413.
+
+  Call-ID shall be a nonempty string of at most 200 UTF-16 code units and the CSeq
+  number shall be a positive safe integer. Invalid identity or sequence shall
+  receive SIP 400. Max-Forwards shall default to 70 when absent, require a positive
+  integer after numeric conversion, and be decremented on forwarding. Invalid or
+  exhausted hop counts shall receive 483. Rejected messages shall not be forwarded.
 verification: |
-  Test content types, blank text, boundary lengths, invalid call IDs and sequences, and exhausted hop counts.
+  Exercise both media types with case and parameters, blank/non-string bodies and
+  body lengths at and above 16384, including supplementary Unicode characters.
+  Test missing/empty/200/201-unit Call-IDs, invalid CSeq numbers and default,
+  positive, fractional, invalid and exhausted hop counts. Assert the specified SIP
+  status, no forwarding on rejection and one decrement on accepted forwarding.
