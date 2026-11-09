@@ -26,6 +26,6 @@ references:
 reviewed: null
 scope: Core
 text: |
-  HTTP shall listen on all IPv4 interfaces at port 8080 by default. SIP shall listen on UDP and TCP port 5060 by default. Configured ports shall replace these defaults.
+  HTTP shall listen on all IPv4 interfaces at port 8080 by default. In LAN mode, SIP shall listen on UDP and TCP port 5060 by default. Configured ports shall replace these defaults. Secure relay deployments shall instead use the TLS-only SIP listener specified by LLR-SRV-MEDIA-015.
 verification: |
   Capture listener options and connect to isolated configured listeners. Check both SIP transports.

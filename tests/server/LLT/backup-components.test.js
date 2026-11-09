@@ -4,6 +4,7 @@
 // @plan Use isolated backup maps with fake live services; corrupt versions, schemas, hashes and sizes before decoding, then inject apply/rollback failures into journal recovery. Check unsafe photo types and exact byte/count limits before reading, preserve destinations on failed durable writes, and reject corrupt recovery journals. Check snapshot isolation, restore exclusion gates and revision/network preservation. Dispatch backup routes using bounded byte streams; verify busy gates, archive metadata, explicit restore confirmation, revision forwarding, durable stage before delayed restart and lock release on failure.
 // @pass Rejections must leave live files unchanged; accepted snapshots and recovered transactions must match expected state without replaying commands.
 // Push-specific assertion scope: exported snapshots omit app-push.json and restore rejects a pending app wake or callback push delivery.
+// TV-result scope: export, decode and restore device-bound completed results; reject foreign-device or mismatched-model results before replacement, and accept older profiles without results.
 
 'use strict';
 const { test } = require('node:test');
@@ -217,6 +218,42 @@ async function fixture(t) {
   );
   return { store, directory: store.dir, backups, callbacks, consoleJobs, sipServer };
 }
+
+test('backup preserves TV results bound to the archived device and rejects mismatched results', async (t) => {
+  const app = await fixture(t);
+  // Existing profiles without diagnostic results remain valid.
+  const baseline = await decodeBackup(await app.backups.download());
+  assert.equal(baseline.state.profiles.term1.tv_test_results, undefined);
+  const results = {
+    device_id: app.store.value.users.term1.device_id,
+    profile: 'cec',
+    power: 'passed',
+    source: 'skipped',
+    power_attempts: 1,
+    source_attempts: 0,
+  };
+  app.store.setDeviceSettings(
+    'term1',
+    { tv_profile: 'cec', tv_test_results: results },
+    { tv_profile: '', tv_test_results: null },
+  );
+  const backup = await decodeBackup(await app.backups.download());
+  assert.deepEqual(backup.state.profiles.term1.tv_test_results, results);
+  const before = fs.readFileSync(app.store.file);
+  for (const patch of [{ device_id: 'another-device' }, { profile: 'samsung' }]) {
+    const files = new Map(backup.files);
+    const state = JSON.parse(files.get('server.json'));
+    Object.assign(state.profiles.term1.tv_test_results, patch);
+    files.set('server.json', Buffer.from(JSON.stringify(state)));
+    await assert.rejects(decodeBackup(await encodeBackup(files)), /TV test results do not match/);
+    assert.deepEqual(fs.readFileSync(app.store.file), before);
+    assert.deepEqual(app.store.value.profiles.term1.tv_test_results, results);
+    assert.equal(fs.existsSync(path.join(app.directory, 'restore-recovery')), false);
+  }
+  await app.backups.stage(backup, app.store.value.configuration_version);
+  await recoverRestore(app.directory, app.store.adminPassword.file);
+  assert.deepEqual(new Store(app.directory).config('term1').tv_test_results, results);
+});
 
 test('restore rolls back partial application and resumes an interrupted rollback before serving', async (t) => {
   const app = await fixture(t),

@@ -9,6 +9,8 @@ links:
 normative: true
 ref: ''
 references:
+- path: tests/server/LLT/app-accounts.test.js
+  type: file
 - path: tests/server/LLT/http-policy.test.js
   type: file
 - path: zmala_server/http/device-routes.js
@@ -20,6 +22,6 @@ references:
 reviewed: null
 scope: Core
 text: |
-  A device token shall identify its owning terminal and shall not grant administrator access. Device routes shall derive identity from that token, not from a requested account or serial number.
+  A device token shall identify its owning enrolled Terminal or App account and shall not grant administrator access. Device routes shall derive identity from that token, not from a requested account or serial number. App tokens shall not grant access to Terminal configuration, settings, status or maintenance routes.
 verification: |
-  Try another device identity and administrator endpoints with a device token. Check configuration, callbacks, status and command ownership.
+  Try another device identity and administrator endpoints with Terminal and App tokens. Check configuration, callbacks, status and command ownership, including denial of Terminal-only routes to App tokens.

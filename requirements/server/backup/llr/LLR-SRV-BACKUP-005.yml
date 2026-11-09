@@ -19,5 +19,7 @@ reviewed: null
 scope: Core
 text: |
   Backup validation shall reject unsupported schema versions, unsafe or duplicate paths, prototype keys and inconsistent account, profile, group or history records. It shall check credentials, picture dimensions, referenced pictures and checksums before changing live data. Referenced ringtone files and catalog entries shall satisfy the normalized PCM format, content hash, name, count and byte limits before replacement.
+  Saved TV test results shall be validated against the Terminal device identity and TV model in the same backup. Valid results shall survive export and restore; results for another device or model shall be rejected.
 verification: |
   Mutate each structural boundary and verify validation fails with unchanged files and memory.
+  Export, decode and restore a Terminal profile with completed TV tests; reject mismatched device identities and models before replacement. Retain compatibility with profiles without test results.

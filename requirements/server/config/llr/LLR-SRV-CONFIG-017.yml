@@ -25,8 +25,8 @@ references:
 reviewed: null
 scope: Core
 text: 'Profiles shall accept the 16 supported terminal language codes, boolean framing, independent integer call/ringtone/button-sound
-  volumes from 0 to 100, and 3 or 5 portraits. TV timeouts shall be 0, 30, 60, 120, 300, 600 or 1200 seconds. New
-  defaults shall be English, framing off, call/ringtone volume 50, button-sound volume 20, 3 portraits and 30 seconds.
+  volumes from 0 to 100, and 3 or 5 portraits. TV timeout choices and defaults shall follow LLR-SRV-CONFIG-025. New
+  defaults shall be English, framing off, call/ringtone volume 50, button-sound volume 20 and 3 portraits.
   Older profiles without ringtone volume shall use their existing configured speaker level; omitted button volume
   shall use 20.
 

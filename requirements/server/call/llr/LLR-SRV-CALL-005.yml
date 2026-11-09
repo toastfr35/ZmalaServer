@@ -2,7 +2,7 @@ active: true
 area: Call control
 derived: false
 header: |
-  Terminal caller proof
+  Enrolled recipient caller proof
 level: 52.0
 links:
 - HLR-SRV-CALL-001: rQ_uICMCozUEY5XBaymy7PTQjYtc6-mIrVU254nt5Ig=
@@ -22,6 +22,6 @@ references:
 reviewed: null
 scope: Core
 text: |
-  Forwarding to a terminal shall replace any supplied caller proof with an HMAC derived from that terminal's device token. The proof shall bind the caller and call identity.
+  Forwarding to an enrolled Terminal or App shall replace any supplied X-Family-Auth caller proof with lowercase hexadecimal HMAC-SHA256 derived from that recipient's device token over the UTF-8 string CALL_ID:CALLER_ACCOUNT. The proof shall bind the caller and call identity. Forwarding shall remove the caller's Authorization and Proxy-Authorization headers.
 verification: |
-  Forward calls to different terminals, recalculate proofs independently and verify that supplied proofs cannot pass through.
+  Forward calls to Terminal and App recipients, recalculate proofs independently and verify recipient-key isolation, removal of caller authentication headers and replacement of supplied proofs.

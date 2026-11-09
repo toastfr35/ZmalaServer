@@ -13,6 +13,10 @@ Server agree. Authoritative runtime requirements and verification links are
 in the themed Doorstop documents. See [ownership.json](ownership.json) for
 ownership and imported parent IDs.
 
+The [9 November 2026 review](reviews/2026-11-09.md) records the implementation
+comparison, corrected discrepancies, verification evidence and remaining
+hardware qualification boundaries.
+
 ## Working in this repository
 
 1. Read the contract and the Server requirement IDs it lists. Inspect the
