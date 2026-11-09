@@ -1,6 +1,6 @@
 # Terminal boot artwork
 
-The shared terminal asset `zmala_terminal/common/assets/boot-family.png` retains
+The [Terminal boot asset](https://github.com/toastfr35/ZmalaTerminal/blob/main/zmala_terminal/common/assets/boot-family.png) retains
 the family word cloud and uses the approved A1 mark at its centre.
 
 It was edited with the built-in image-generation tool. The edit prompt was:

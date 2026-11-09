@@ -6,9 +6,9 @@ A1 is the main Zmala brand. A3 is the compact phone app mark.
 
 PNG contains 18 exports:
 
-- A1 with the Zmala wordmark, on light and dark backgrounds, at256,512 and1024pixels wide.
-- A1 without the wordmark, on light and dark backgrounds, at256,512 and1024pixels square.
-- A3 without text, on light and dark backgrounds, at256,512 and1024pixels square.
+- A1 with the Zmala wordmark, on light and dark backgrounds, at 256, 512 and 1024 pixels wide.
+- A1 without the wordmark, on light and dark backgrounds, at 256, 512 and 1024 pixels square.
+- A3 without text, on light and dark backgrounds, at 256, 512 and 1024 pixels square.
 
 Wordmark exports preserve the master aspect ratio; exact dimensions are in sizes.json.
 Masters contains the six full-resolution PNG masters.
@@ -17,7 +17,7 @@ Preview.png compares all six versions. Android-mask-preview.png shows the dark a
 ## Recommended use
 
 The Overview banner uses the transparent A1 mark shared with ZmalaTerminal
-(`1fcd592`). Its alpha channel lets the banner gradient show through.
+in the Terminal repository. Its alpha channel lets the banner gradient show through.
 
 Use A1 for the website, terminal, administration and documents. Choose the light or dark version to match its surroundings.
 Use A3 on a consistent dark navy background for the phone app. It keeps the purple/green mark readable on both light and dark home screens. The light app version is supplied for comparison.

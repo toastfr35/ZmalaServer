@@ -1,7 +1,8 @@
 # Zmala Server implementation
 
 The administration uses A1 dark; setup PDFs and guide footers use A1 light.
-Runtime logo copies come from `docs/branding/` via `node build_tools/create-product-icon.cjs`.
+Approved source artwork is retained in `docs/branding/`; runtime copies are
+under `zmala_server/assets/`. Keep those copies consistent when changing branding.
 
 This guide describes the Linux server's deployment, request boundaries, identities,
 SIP/media lifecycle and persistence. It is intended for developers and maintainers.
@@ -15,7 +16,7 @@ server with two native terminal call engines behind separate NAT gateways. It
 uses disposable state and never connects to the installed server or terminals.
 
 Contents: [purpose and functions](#server-purpose-and-functions),
-[deployment](#deployment-pipeline), [service and SSH](#service-ssh-and-storage),
+[installation](#pi-package-installation), [service and SSH](#service-ssh-and-storage),
 [authentication](#administration-and-authentication), [account model](#accounts-groups-and-terminal-settings),
 [SIP/media](#sip-and-media-internals), [persistence](#persistence-and-backup),
 [source map](#source-map-and-verification).
@@ -31,9 +32,9 @@ An administrator uses a web browser to manage the server. Terminal users make
 calls and change the permitted local settings through their terminals. The server
 connects these two views of the same configuration and reports conflicts.
 
-This description covers the installed Linux server and its host policies. It
-excludes release packaging and SD-card preparation. Client
-behavior appears only where it defines an interface with the server.
+The function summaries cover the installed Linux server and its host policies.
+Package installation is described below; SD-card image composition belongs to
+Zmala. Client behavior appears here where it defines an interface with the server.
 
 ### 1. Startup and shutdown
 
@@ -145,7 +146,7 @@ call completes requests between the two accounts.
 
 Terminals obtain requests through polling. Zmala Phone uses signed Firebase hints
 and authenticated state refresh to show callback reminders; reachable SIP clients
-can also receive SIP notices.
+can also receive legacy SIP notices for App accounts.
 Optional email reminders use the configured deadline and recipient addresses.
 Delivery attempts stop when the request is no longer eligible. Acceptance by a
 phone or mail server does not prove that a person read the notice.
@@ -215,10 +216,26 @@ alone proves call quality or hardware compatibility.
 
 ## Pi package installation
 
-On Raspberry Pi OS Lite 64-bit Trixie, connect by wired Ethernet. Download the
-archive and SHA-256 sidecar, verify it using sha256sum -c, extract the package
-in a new directory and run sudo ./install.sh on the Pi. The package manager
-installs system and locked Node dependencies.
+The package installer currently accepts Raspberry Pi 3/4 Model B hardware with
+the official Raspberry Pi OS Lite 64-bit Trixie image. It checks the `arm64`
+architecture, hostname `zmalaserver`, an existing non-root `zmalaserver` account,
+an active physical `eth0`, mounted `/boot/firmware`, and at least 1 GiB free under
+`/var`. Prepare the hostname and account when writing the OS image; use a local
+operator account with sudo access for installation. Other models or operating
+systems are rejected by these checks.
+
+Download the archive and SHA-256 sidecar from the same release. Verify with
+`sha256sum -c ZmalaServer-<version>-linux-arm64.tar.gz.sha256`, extract into a new
+directory, enter it and run `sudo ./install.sh` over wired Ethernet. The installer
+also verifies the extracted payload checksums. It uses the target package manager
+for system dependencies and the lockfile for Node dependencies.
+
+After installation, reboot to activate the storage policy. Open
+`http://<server-LAN-address>:8080/` on the server's local subnet for a fresh default
+installation and set the administrator password. Existing installations retain
+their configured address/port and may require HTTPS. Check the service, sign-in,
+device registration and a real call; a successful install alone does not qualify
+the attached terminals.
 
 Back up the existing server before upgrading or moving it. Use the
 administration backup/restore workflow, then verify accounts and a real call
@@ -226,7 +243,8 @@ before retiring the previous device. Offline provisioning is handled by Zmala.
 To request a second bootstrap export, the service environment can set
 ZMALA_BOOTSTRAP_EXPORT_DIRECTORY to an absolute, server-owned directory.
 
-Build a package with make package on a clean checkout. The archive identifies
+Use the [local package command](general.md#packages-and-release-guides) on a
+clean checkout. The archive identifies
 its commit and version in ZMALA-COMPONENT.json and lists payload checksums.
 
 ## Developer access to a remote terminal
@@ -268,23 +286,11 @@ changes. Missing addresses leave ordinary SSH blocked rather than allowing all
 sources. Terminal tunnel setup, TV commands and optional C20 viewing are described
 in the terminal technical guide. Pairing and physical TV tests remain separate.
 
-The experimental appliance builder installs the isolated developer services
-without running the live installer. It keeps ordinary SSH masked; the normal
-`ssh -J` example above therefore requires an already configured server-side
-operator entry point, such as the existing installed server. Complete standalone
-and combined-image operator onboarding remains a qualification gate. The image
-helper generates the per-device host key under root-private `/etc/ssh/keys` and
-retains a server activation in that directory's `developer-session.json`, outside
-account backups. On boot it restores the restricted account password from a
-validated retained activation before its listener starts. An absent activation
-does not start that listener. On combined hosts, the authenticated sudo service
-identity selects the server or terminal actions; the two applications cannot
-substitute for each other. Terminal-side loopback access uses a separately
-provisioned operator public key, not the generated tunnel password. The current
-private terminal test copy stores that public key in both immutable roots and
-uses an explicit fixed reader command, preserving factory data admission. This
-lab-only authorization is separate from future supported operator enrollment
-and is removed by a generic root-slot replacement.
+SD-card images have a separate host-access and provisioning policy owned by
+the [Zmala image builder](https://github.com/toastfr35/Zmala/blob/main/zmala_images/README.md).
+Do not assume package-installer SSH access or operator enrollment applies to an
+image-managed or combined host. Follow that image's documented qualification and
+recovery procedure.
 
 ## Service, SSH and storage
 
@@ -310,101 +316,22 @@ RAM-backed `/tmp` and `noatime` on the root filesystem. State remains durable;
 the filesystem remains writable. Export operational logs before reboot, which
 clears them. Installer recovery logs are retained separately.
 
-`GET /health` is liveness. `GET /ready` returns 503 for a known unresolved snapshot
-failure and 200 after its commit succeeds. Neither proves registration, call
-quality, free disk space or full backup consistency.
+Outside restore maintenance, and after common HTTP policy checks, public
+`GET /health` returns 200 with `{"ok":true}`. `GET /ready` returns 503 with
+`{"ok":false,"persistence":false}` while any state or bootstrap writer has an
+unresolved failure. It returns 200 with `{"ok":true,"persistence":true}` once all
+writers recover. A pending write without a recorded failure still reports ready.
+Neither endpoint proves registration, call quality, free disk space or full
+backup consistency.
 
-### Experimental image-managed storage
+### Image-managed storage
 
-Compact-policy roots (`HLR-SRV-HOST-030`, including combined) use a
-14,001,635,328-byte layout with two 4 GiB system slots and fixed 4 GiB data.
-Before identity creation, early boot validates the selected Pi 4 SD parent,
-root/data UUIDs, kernel extents and factory-only state, then relocates backup GPT
-metadata to the card end with durable readback. Partition sizes and boot state
-remain unchanged; extra capacity is unallocated. Unknown or initialized media
-needing repair is fenced. Retry requires a complete original GPT pair or a
-complete new backup matching the unchanged primary array. Sparse-file 16 GB and
-32 GB tests do not qualify physical power interruption or Pi boot.
-
-The replacement SD-image work now has a shared `zmala_system` storage helper
-(experimental `HLR-SRV-HOST-008` and its LLRs). It accepts a marked read-only root,
-prevalidated ext4 data with initialized identity, and RAM work. Package status and
-alternatives remain under the selected root's `/usr/lib/zmala/slot-dpkg`; a small
-vendor `/var` seed populates a fresh 128 MiB RAM view. `/etc` uses a fresh overlay
-with a 64 MiB RAM upper area, and `/tmp` uses a separate 128 MiB RAM mount.
-
-The fixed server bindings preserve application state, NetworkManager profiles and
-identity, Bluetooth state, SSH keys, certificates and product operator settings.
-Only `/etc/ssh/keys` and `/etc/zmalacall/operator` are bound for those settings;
-SSH and product defaults stay with the selected root. Identity/hostname bindings
-are read-only. The authored image journald policy selects volatile storage capped
-at 32 MiB with 4 MiB files. Existing directories with incompatible ownership,
-permissions or links are rejected; the helper never bulk-converts imported state.
-
-
-The experimental `combined` image role (**Zmala Terminal + Server**) uses the same
-host identity and A/B boot contract, with terminal UID/GID 1000 and server UID/GID
-1001. Their application trees remain separate mode-0700 bindings. Operator
-configuration binds `/etc/zmalacall/operator/terminal` and
-`/etc/zmalacall/operator/server` as root-owned mode-0750 directories readable only
-by their respective groups. SSH and certificate state remain root-private.
-Standalone roles retain UID/GID 1000 and their existing paths. Root, factory data,
-initialized data and boot records reject role substitution; conversion needs a
-separate migration. Offline image provisioning now installs the existing server
-unit and its locked service account. Its source release and private bootstrap
-directory are separate from terminal state. Integrity-checked JS dependencies
-are retained without npm lifecycle scripts; target Node starts under its service
-UID in an isolated network with temporary RAM data to check HTTP readiness.
-NetworkManager is included explicitly in the server package lock. SSH and the
-legacy updater remain masked in these development roots. Secure relay/TLS and
-first-owner onboarding, coordinated updates and qualified media remain pending.
-
-This code has unit and real isolated-namespace evidence. The archive preparation
-tool packages it without starting it or initializing device data. The separate
-`zmala_system.device_identity` helper (`HLR-SRV-HOST-013`) can initialize identity
-on prevalidated marked factory data. It requires Linux UID/GID 0, an ext4 mount
-with root-private permissions and a matching factory record. A persistent
-nonblocking lock serializes initialization. Kernel-generated identity and default
-hostname are synchronized and published together before the initialized-data
-marker; interrupted retries preserve a committed identity. Invalid saved state
-fails without factory reset. Real ext4 process-interruption tests exercise this
-ordering, but do not establish physical power-cut or boot recovery.
-
-The experimental early-boot path (`HLR-SRV-HOST-017`) now validates its marked
-read-only root, kernel slot/PARTUUID, actual GPT/ext4 metadata and kernel device
-topology. It discovers data only as the declared sibling on the same parent,
-without a global label lookup or assumed device name. It mounts that data,
-initializes compatible identity, prepares views and writes a read-only selected
-root entry into the volatile `fstab`. Complete private RAM readiness is required
-both by the early entry and a PID1 service required before `sysinit.target`.
-The latter also refuses missing preparation if the early helper is killed.
-
-The offline image tools generate a candidate initramfs and validate target Python
-imports and copied bytes. Namespace integration is separate from actual initramfs
-and PID1 boot qualification. The assembler now produces new regular-file A/B
-development media from matched root/initramfs/loader manifests; it does not flash
-devices. Its confirmed factory boot stops the loader watchdog until joint health
-transfer exists. First-owner setup and physical qualification remain pending.
-Current installers/services use the layout and
-64 MiB journal policy described above; this experiment does not change them.
-
-The experimental confirmed/trial controller (`HLR-SRV-HOST-022`) now has a
-closed redundant environment contract. A distinct eligible candidate receives
-one attempt, durably consumed before selection; subsequent selection falls back
-to the confirmed slot until an explicit current-slot, transaction and generation
-confirmation succeeds. RAUC eligibility changes never confirm product health.
-Automatic installed-slot activation remains disabled by the packaged policy.
-The custom adapter refuses unqualified `set-primary`; the future coordinator
-must use explicit `stage` after its complete-pair installation/admission checks.
-
-Linux raw access requires the existing startup gate, marked boot policy, Pi 4
-SD topology, current-root and sibling-data identities, both GPT copies and fixed
-environment ranges outside partition metadata/filesystems. Fixed bounded tools
-run with private configuration, empty fallback defaults, a persistent lock inode
-and exact state readback. Corruption never initializes factory state. The package
-keeps PID1 runtime watchdog ownership disabled during trial startup; bounded
-kernel handoff and qualified product-health transfer remain integration gates.
-These components are not installed on the existing server by this experiment.
+The [Zmala repository](https://github.com/toastfr35/Zmala/blob/main/zmala_images/README.md)
+owns SD-card layouts, boot slots, device identity, read-only roots, shared storage
+and combined Terminal/Server images. Its requirements and verification records
+are authoritative for those features. They are separate from the writable-root
+package installation and low-write policy described above. Application backups
+do not include an image's boot state or host configuration.
 
 ## Administration and authentication
 
@@ -419,7 +346,9 @@ interface between light and dark mode. The browser remembers the choice.
 **Change password** requires the current password and revokes other sessions.
 **Sign out** revokes the current one. Sessions expire after eight hours and on
 restart. Cookies are HttpOnly/SameSite=Strict, with Secure added for HTTPS. Login
-is limited to five attempts per address/minute and thirty globally/minute.
+shares a limiter with first setup and password changes: five attempts per TCP
+peer address and thirty globally in a 60-second window. Rejections return HTTP
+429 with `Retry-After: 60` before password hashing.
 The server stores a salted scrypt hash and excludes it from API views.
 
 Installed services store the hash in
@@ -453,13 +382,14 @@ service. Open `https://<server-address>:8443/`; the HTTPS and HTTP ports differ.
 Administration requires the server's local network on both HTTP and HTTPS.
 With HTTPS configured, non-loopback HTTP administration is also rejected;
 authenticated terminal HTTP traffic remains available only outside secure relay mode.
-SIP/RTP remains unencrypted.
+HTTPS alone does not encrypt LAN SIP/RTP; the separate secure-call policy below
+enables SIP TLS and SRTP.
 
 ### Password recovery
 
 Stop `zmalacall-server`, remove only its configured admin password file, restart,
 and immediately set a new password in the browser. This reopens setup to anyone
-who can reach the server until the password is set. Do not remove `server.json`
+on the permitted server LAN until the password is set. Do not remove `server.json`
 or the data directory. Deleting the file while running takes effect on restart.
 Windows access to the SD boot partition can reset only legacy boot-partition
 password files, not the dedicated installer's Linux data-partition file.
@@ -512,7 +442,7 @@ quiet borders and high-contrast text suitable for grayscale printing. Display th
 app's QR-image import.
 Settings include auto-answer, fixed C20 hardware information, resolution, FPS, framing,
 volume, ringtone, language, portrait count and TV return. See the
-[terminal settings implementation](terminal.md#settings-and-controls) for input,
+[Terminal implementation](https://github.com/toastfr35/ZmalaTerminal/blob/main/docs/terminal.md) for input,
 save semantics and selected-input safety. New/missing TV inactivity values default
 to 30 minutes; saved choices, including 30 seconds and Never, are preserved. The
 administration form and device API also accept an explicit 30-minute choice.
@@ -554,8 +484,8 @@ a call connects in either direction. Cancellation, permission revocation, accoun
 deletion or conversion that invalidates enrollment removes eligibility. Terminal polls
 include only that terminal's requests, independently of configuration revision.
 
-Reachable SIP clients receive server-generated MESSAGE notices over their
-registration flow. Independently, eligible App accounts receive signed Firebase
+Reachable App SIP clients receive legacy server-generated MESSAGE notices over
+their registration flow; Terminals obtain callbacks through authenticated polling. Independently, eligible App accounts receive signed Firebase
 state hints, even without a live SIP connection; Android fetches current authorized
 callback state before showing a notification. Failed deliveries retry at most
 once/minute, with pending work checked every five seconds and on registration.
@@ -616,7 +546,8 @@ route. Only peers of a connected App/Terminal or App/App SIP dialog can read it;
 can claim an idle share; the sender alone can upload (`PUT`), stop (`DELETE`) or renew (`POST` with `revision`). `GET` returns
 revision and lease status; `GET` with `image=1&revision=…` returns a private,
 non-cacheable JPEG. Configurations advertise `call_photo_sharing`; app contacts
-include `account_type` so the control is shown only for terminal calls.
+include `account_type` so clients can distinguish participant kinds. The Server
+supports sharing in both App/Terminal and App/App calls.
 
 Uploads are capped at 2 MiB and decoded outside the Node event loop by
 `call_photo.py` (Pillow, already installed for portrait conversion). JPEG/PNG
@@ -625,9 +556,14 @@ and stripped of metadata. A single dialog permits one decode; the server permits
 two concurrently. Temporary decode files are removed in `finally`.
 
 The dialog owns the normalized bytes, outside portrait storage and backups.
-Stop increments a revision to invalidate late uploads; completion rechecks both
-enrollments and dialog identity. A 12-second sender lease bounds stale display;
-status/image access expires it, and dialog closure releases all photo state.
+Stop increments a revision to invalidate late uploads. The route rechecks both
+enrollments, dialog identity and revision after receiving the body and again
+after conversion, so obsolete uploads do not start a decoder or publish bytes.
+A replacement upload reports zero remaining lease until new bytes are published.
+A successful upload starts a 12-second sender lease; only renewal of the active
+revision extends it. Stale renewals return status without extending the lease.
+Status/image access expires it at the deadline, and dialog closure releases all
+photo state. Failed uploads release their processing slot.
 No SIP or audio/video negotiation changes are made by photo operations.
 
 ## SIP and media internals
@@ -656,7 +592,7 @@ cannot be revived by pending asynchronous work.
 For Zmala Phone, download the App account server QR and scan it in the app.
 `GET /api/app/config` authenticates with that app bearer token, returns only its
 identity and permitted contacts, and excludes Pi settings and other account secrets.
-App tokens cannot use terminal APIs. The app supports LAN and secure relay calls with Firebase incoming alerts; see [Android implementation](android.md). Legacy SIP clients keep
+App tokens cannot use terminal APIs. The app supports LAN and secure relay calls with Firebase incoming alerts; see [Android implementation](https://github.com/toastfr35/ZmalaApp/blob/main/docs/android.md). Legacy SIP clients keep
 their migrated credentials; LAN calling uses video, no media encryption and no ICE/STUN. Enable H.264
 for Pi calls. Video targets are settings, not delivered-frame guarantees;
 the relay does not reduce the terminal's camera/codec workload.
@@ -670,8 +606,7 @@ Install a dedicated service-account key outside the release and server data,
 owned by root and readable only by the server service group (0640). The dedicated
 `push-sender@YOUR_PROJECT_ID.iam.gserviceaccount.com` account has the Firebase Cloud
 Messaging API Admin role. Set `ZMALA_FCM_CREDENTIALS` to its absolute JSON path in
-a systemd service drop-in and restart when no call is active. On this Pi the path
-is `/etc/zmalacall-server/fcm-sender.json` and the drop-in is
+a systemd service drop-in and restart when no call is active. For example, use `/etc/zmalacall-server/fcm-sender.json` and the drop-in is
 `/etc/systemd/system/zmalacall-server.service.d/firebase.conf`. The key is never
 included in an APK, repository, installer or exported application backup. A new
 installation needs its own private sender configuration. Without this setting,
@@ -773,12 +708,14 @@ Paths below are relative to `zmala_server/`.
 | --- | --- |
 | `validation.js`, `terminal-status.js` | Separate account/configuration validation and bounded device telemetry; receipt times belong to the server |
 | `main.js`, `shutdown.js` | Composition, bootstrap publication and coordinated shutdown |
-| `http/handler.js`, `responses.js`, `admin-routes.js`, `device-routes.js` | Host/origin/authentication boundary and scoped API operations |
+| `http/handler.js`, `http/responses.js`, `http/admin-routes.js`, `http/device-routes.js` | Host/origin/authentication boundary and scoped API operations |
 | `store.js`, `contact-directory.js`, `accounts.js`, `terminal-settings.js`, `migrations.js` | Validated configuration, revision-cached phone/terminal directories, identities and migration |
 | `json-file.js`, `snapshot-file.js`, `history.js` | Startup/tool persistence, asynchronous snapshots and bounded history |
 | `backups.js`, `backup-format.js`, `backup-storage.js`, `http/backup-routes.js` | Validated export, restore transaction and recovery |
 | `sip-server.js`, `sip-dialogs.js`, `sip-guards.js`, `sip-transport.js`, `registrations.js`, `sip-messages.js` | SIP admission/lifecycle, ordered dialog/media transactions, shared exact-transport ownership checks, validation, presence and messaging |
-| `media.js` | RTP/RTCP ports and transactional SDP updates |
+| `media.js`, `secure-calls.js` | RTP/RTCP relay, transactional SDP updates and secure deployment policy |
+| `call-photo.js`, `call_photo.py` | Private in-call images, normalization and expiring sender leases |
+| `terminal-updates.js` | Bounded public manifest cache and expiring maintenance telemetry |
 | `callbacks.js`, `callback-*.js`, `console-jobs.js` | Callback/reminder jobs and maintenance leases/results |
 | `photos.js`, `portrait-gif.js`, `setup-pdf.js` | Bounded static/GIF inspection, Python/Pillow conversion and PDFKit QR documents |
 | `web/admin-*.js`, `web/styles/`, `types/` | Browser controllers/styles and strict shared API/DOM contracts |
@@ -794,7 +731,7 @@ identical in-flight inputs and publishes by content hash. New inputs are square,
 Historical PNG/JPEG backup inspection retains its original 16-megapixel/8192-side bound.
 PDFKit uses built-in fonts. Disk portrait garbage collection remains outstanding.
 
-Run `make test`, `make lint` and `make requirements` as described in
+Run `make test-llt test-hlt test-adhoc`, `make lint` and `make requirements` as described in
 [general.md](general.md#development-tools-and-checks). Unit scenarios under
 `tests/server/LLT/` trace directly to server LLRs; HTTP/SIP/system scenarios under
 `tests/server/HLT/` trace to server HLRs. Each file starts with its stable test ID,
@@ -814,26 +751,22 @@ and settings persistence. Viewport tests do not certify physical iOS/Android use
 
 ### Server requirement baseline
 
-The server baseline follows [the rewrite procedure](../howto_rewrite_requirements.md).
-Its 15 functional areas contain 31 HLRs and 107 LLRs. HLRs link to product items,
-and each LLR links to an HLR in the same area. The text uses short sentences,
-active voice and consistent technical terms, following the published
-[ASD-STE100 principles](https://www.asd-ste100.org/STE_faq.html). This review is
-not a controlled-dictionary compliance certificate.
+The baseline has 16 functional themes, 36 Server HLRs and 117 LLRs, plus 13
+imported product parents at this review. HLRs link to product items; each LLR
+links to an HLR in its theme. Follow the
+[authoring guidance](../requirements/README.md#writing-verifiable-requirements)
+and regenerate the reports for current counts.
 
-[The server migration map](../requirements/server/migration.json) records all
-replaced items and their successors, including splits. A successor records the
-behavior that was carried forward; it does not establish verification. The flat
-legacy ID lookup selects a primary successor for older tooling.
-
-All server LLRs have direct LLT plans and implementation anchors; all HLRs have
-direct HLT plans. System coverage
-is separate: a planned trace does not prove that a scenario passed or that all
-conditions in its requirement were tested. Historical rewrite evidence used the local generated path
-`tests/coverage/server-rebaseline/index.html`; it is not distributed with a fresh
-checkout. Generate current LLT execution evidence with `make coverage-llt` and
-current trace/plan reports with `make requirements`. See the
-[verification workflow](general.md#development-tools-and-checks) for platform limits.
+[The legacy ID map](../requirements/id-migration.json) records primary
+successors for older requirement IDs. It is a lookup, not verification evidence.
+All Server LLRs have code anchors and direct LLT plans; all HLRs have direct HLT
+plans. `make requirements` checks those links and publishes the trace and test
+plan reports. A mapped plan does not prove all of its clauses were exercised.
+See the [implementation and quality reviews](../requirements/README.md) for
+recorded evidence. The photo/cache boundary gaps were covered by
+[PR #34](https://github.com/toastfr35/ZmalaServer/pull/34); the remaining SIP and
+Wi-Fi boundary assertions are tracked in
+[issue #31](https://github.com/toastfr35/ZmalaServer/issues/31).
 
 The Linux HLTs now include real UDP Digest-authenticated text delivery, real
 portrait conversion through HTTP and Pillow, and a disposable production process
@@ -858,8 +791,8 @@ contribute to server coverage even though the file is outside `zmala_server/`.
 
 The disposable multi-network lab is maintained in the Zmala image builder.
 Set ZMALA_IMAGE_BUILDER_ROOT to a reviewed checkout and follow its lab README
-to prepare the pinned combined application input before running the Server
-network lab HLT launchers.
+to prepare the pinned application input before running the Server
+[network lab HLT launchers](general.md#three-network-docker-lab).
 
 
 Secure relay mode is an explicit deployment choice for all Terminal and App accounts.
@@ -891,11 +824,10 @@ be forwarded to an ACME challenge responder for certificate issuance/renewal.
 Use the same trusted hostname certificate for all three TLS services. All client
 connections are outbound; the phone and terminal routers need no port forwarding.
 
-The server Installation PDF includes a generic router walkthrough for this
-single-Pi topology, including DHCP reservation, DDNS, double NAT and CGNAT,
-the forwarding rules, and outside-network checks. Its editable source is
-`docs/server_prep.docx`; `build_tools/update-network-guides.py` maintains the
-network sections. Forwarding is separate from secure-service provisioning and
+The Installation PDF summarizes the prerequisites and forwarding rules for
+this single-Pi topology. Its editable source is `docs/server_prep.docx`; render
+it with `build_tools/release/guides.py` after editing. The configuration examples
+and deployment details below remain the technical reference. Forwarding is separate from secure-service provisioning and
 must match the configured listeners and coturn relay range.
 
 One reference Pi deployment uses a wired DHCP reservation and relay UDP ports
@@ -947,8 +879,9 @@ Environment=ZMALA_TLS_KEY=/etc/zmalacall-server/https-key.pem
 Environment=ZMALA_HTTPS_PORT=8443
 ```
 
-Forward public configuration TCP 443 to the server's 8443, and public SIP TCP 443
-to 5061. The Host check accepts the policy's public HTTPS origin. SIP Via and
+For the separate-public-IP example above, forward configuration TCP 443 to
+the server's 8443 and SIP TCP 443 to 5061 on its own public IP. For the single-IP
+topology, use the explicit 5061/5349 public-port overrides described earlier. The Host check accepts the policy's public HTTPS origin. SIP Via and
 Record-Route advertise the public TLS endpoint, not the internal listener port.
 Run `systemctl daemon-reload` and restart `zmalacall-server`. Invalid policy or
 missing certificates stops startup. HTTP remains available only for health/readiness
@@ -1014,8 +947,8 @@ configuration and health endpoints returned 200. LAN administration returned
 200. The phone's starting Wi-Fi setting was restored. The first live attempt
 was interrupted by USB disconnection and is not counted as a pass. A subsequent
 idle service restart expired the diagnostic sessions, including that interrupted
-attempt. The server suite passed 199 tests with four opt-in/hardware skips;
-unit policy checks also cover remote app/terminal configuration and portraits.
+attempt. This is historical deployment evidence, not a qualification of the current
+release. Current checks and platform limits are recorded by each PR's Verify run.
 
 ### App callback requests
 
@@ -1028,11 +961,6 @@ pair deduplication, the 400-pending limit, cancellation on permission loss,
 expiry and connected-call completion apply to both App and Terminal requesters.
 The app receives no access to Pi settings or console APIs. Phone missed-call
 counts remain local to the app and are not part of server backups.
-
-App request cancellation uses `DELETE /api/app/callbacks/:id`. Only the authenticated
-requesting app can cancel its pending request; the recipient cannot cancel it on
-the requester's behalf. The existing callback lifecycle persists the change and
-subsequent phone/terminal snapshots remove the pending indicator.
 
 App request cancellation uses `DELETE /api/app/callbacks/:id`. Only the authenticated
 requesting app can cancel its pending request; the recipient cannot cancel it on
@@ -1097,15 +1025,17 @@ measurements, validated resolution pairs and safe integer codec counters. Unknow
 fields are omitted; missing measurements remain unavailable. Reports are copied
 before publication, and rejected reports preserve the last accepted snapshot.
 
-The contact directory caches stable permissions and contact rows for both phone and
-terminal readers within one configuration revision. Returned rows are detached;
+The contact directory sorts account IDs once per configuration revision and
+reuses that order across phone and terminal views. Stable permissions and contact
+rows are also cached within the revision. Returned rows are detached;
 presence and callbacks are enriched at the HTTP boundary. Configuration mutations
 invalidate all derivations together. Identity-changing administration also rejects
 accounts participating in push-wake calls, before those calls own SIP dialogs.
 
 ### HTTP route access and dependency inventory
 
-Reviewed against `http/handler.js` and its route modules on 2 November 2026.
+Access boundaries are implemented in `http/handler.js` and its route modules;
+use the [peer contracts](../requirements/README.md) for route-level obligations.
 Host, Origin, HTTPS policy and restore-in-progress checks run before dispatch.
 Cookie-authenticated writes require same-origin evidence. Route handlers retain
 payload limits, account-type/ownership validation and durable write barriers.
@@ -1139,11 +1069,34 @@ Closing a SIP dialog revokes connected status and shared-photo revision/bytes be
 
 Account editing, photo preview URLs and account search/filter state are private to admin-accounts.js. Shared admin-state retains the loaded model and cross-feature navigation/refresh hooks. Existing generation guards fence late upload/save results; closing the editor revokes temporary URLs.
 
-Pi installer payloads exclude local Floorplan, cache and VCS directories. Archive regression checks cover the current runtime modules; installer checks remain separate from product runtime requirements. Installation builds generated assets before root-owned deployment and preserves persistent device/account data.
+The package builder selects tracked Server files, installation helpers and
+guides. Local caches, credentials and runtime data are separate from those inputs.
+Installation builds browser assets before root-owned deployment and preserves
+persistent device/account data. Installer checks remain separate from product
+runtime requirements.
 
 
 ### Automatic terminal update reporting
 
-`terminal-updates.js` caches one public signed manifest refresh for five minutes and shares an in-flight refresh. Requests have origin, redirect, deadline and byte limits and carry no device credentials. Enrolled terminal bearer identities alone may use `/api/terminal-updates/manifest` and `/api/terminal-updates/status`. The terminal still authenticates the manifest itself.
+`terminal-updates.js` shares one in-flight public manifest refresh and caches a
+successful result, including no manifest, for five minutes. A failed refresh
+rejects its waiting requests, then backs off for one minute. During backoff,
+reads return the previous value, or null before the first success.
 
-Updater receipt time and phase/version/error fields are separate from camera/remote diagnostics; neither report overwrites the other. Read-only version/progress badges expire after sixty seconds. Fresh active maintenance rejects new SIP calls with 480; request/waiting and stale status do not block calls. This supplements the terminal-side lease fence and does not add administrator approval. This integration is deployed; current end-to-end qualification is recorded in `docs/terminal-update-qualification.md`.
+Metadata is capped at 1 MiB and manifest JSON at 65536 bytes, with a ten-second
+timeout per fetch. Metadata cannot redirect; manifests may follow at most three
+redirects to the allowed HTTPS release origins. Requests carry no device
+credentials. Response bodies are released on success, redirects and errors,
+and cleanup does not mask the original failure. Only enrolled Terminal bearers
+may use `/api/terminal-updates/manifest` and `/api/terminal-updates/status`.
+The Terminal authenticates the manifest itself.
+
+Updater receipt time and phase/version/error fields are separate from camera and
+remote diagnostics; neither report overwrites the other. Version/progress badges
+expire after sixty seconds. A report aged 0 through 60000 ms blocks new calls
+with SIP 480 when its phase is updating, checking, rollback or recovery_failed.
+Idle/request, stale and future-dated reports do not block calls. This supplements
+the Terminal's own maintenance checks and does not add administrator approval.
+Terminal end-to-end evidence is recorded in the owning repository's
+[update qualification record](https://github.com/toastfr35/ZmalaTerminal/blob/main/docs/terminal-update-qualification.md);
+Server fixture checks alone do not qualify an installed update.
