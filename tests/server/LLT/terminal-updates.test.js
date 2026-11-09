@@ -1,7 +1,7 @@
 // @test S-LLT-068
 // @requirements LLR-SRV-MAINT-022
 // @environment portable
-// @plan Use disposable public fetch responses and clocks to check shared in-flight caching, cache expiry, old releases, response/origin/redirect bounds, typed telemetry and maintenance expiry; render admin badges with a view double and invoke SIP with an authenticated updating target.
+// @plan Use disposable public fetch responses and clocks to check shared refresh success/failure, exact cache/backoff deadlines, stale/null fallback and recovery, body cleanup, old releases, response/origin/three-redirect bounds, typed telemetry and maintenance expiry; render admin badges with a view double and invoke SIP with an authenticated updating target.
 // @pass Feed requests share one bounded unauthenticated fetch, malformed telemetry is rejected, maintenance expires after 60 seconds, and new SIP calls receive 480 before forwarding to an updating terminal.
 'use strict';
 const test = require('node:test');
@@ -92,6 +92,121 @@ test('public manifest cache shares requests and enforces transport bounds', asyn
     transport: async () => new Response(JSON.stringify({ assets: [] })),
   });
   assert.equal(await old.manifest(), null);
+});
+
+test('failed refresh rejects all waiters, backs off with stale or null data, then recovers', async () => {
+  for (const primed of [false, true]) {
+    let now = 0,
+      calls = 0,
+      fail = false;
+    const failure = Error('offline');
+    const manifest = { payload: 'signed' };
+    const cache = new TerminalUpdates({
+      clock: () => now,
+      transport: async (address) => {
+        calls++;
+        if (fail) throw failure;
+        return Response.json(
+          address === url
+            ? manifest
+            : { assets: [{ name: 'ZmalaTerminal-Update.json', browser_download_url: url }] },
+        );
+      },
+    });
+    if (primed) {
+      assert.deepEqual(await cache.manifest(), manifest);
+      now = 299999;
+      await cache.manifest();
+      assert.equal(calls, 2);
+      now++;
+    }
+    fail = true;
+    const before = calls;
+    const results = await Promise.allSettled([cache.manifest(), cache.manifest()]);
+    assert.ok(results.every((result) => result.status === 'rejected' && result.reason === failure));
+    assert.equal(calls, before + 1, 'failed refresh is also shared');
+    fail = false;
+    assert.deepEqual(await cache.manifest(), primed ? manifest : null);
+    now += 59999;
+    assert.deepEqual(await cache.manifest(), primed ? manifest : null);
+    assert.equal(calls, before + 1, 'no network work during backoff');
+    now++;
+    assert.deepEqual(await cache.manifest(), manifest);
+    assert.equal(calls, before + 3, 'retry starts at the exact backoff deadline');
+  }
+});
+
+test('release bodies are cancelled and unlocked without masking validation failures', async () => {
+  for (const [status, bytes, location, expected] of [
+    [503, 'unavailable', undefined, /Release unavailable/],
+    [302, 'redirect body', 'https://evil.test/file', /Invalid release redirect/],
+    [200, 'x'.repeat(11), undefined, /too large/],
+  ]) {
+    for (const failCleanup of [false, true]) {
+      let cancelled = 0;
+      const response = new Response(
+        new ReadableStream({
+          start(controller) {
+            controller.enqueue(Buffer.from(bytes));
+          },
+          cancel() {
+            cancelled++;
+            if (failCleanup) throw Error('cleanup failed');
+          },
+        }),
+        { status, headers: location ? { location } : {} },
+      );
+      const cache = new TerminalUpdates({ transport: async () => response });
+      await assert.rejects(cache.json(url, 10), expected);
+      assert.equal(cancelled, 1);
+      assert.equal(response.body.locked, false);
+    }
+  }
+  for (const bytes of ['{}', 'invalid JSON']) {
+    const response = new Response(bytes);
+    const cache = new TerminalUpdates({ transport: async () => response });
+    if (bytes === '{}') assert.deepEqual(await cache.json(url, 100), {});
+    else await assert.rejects(cache.json(url, 100), SyntaxError);
+    assert.equal(response.body.locked, false);
+  }
+  const failure = Error('stream failed');
+  const response = new Response(new ReadableStream({ start: (c) => c.error(failure) }));
+  const cache = new TerminalUpdates({ transport: async () => response });
+  await assert.rejects(cache.json(url, 100), (error) => error === failure);
+  assert.equal(response.body.locked, false);
+});
+
+test('manifest follows at most three redirects and metadata cannot redirect', async () => {
+  for (const redirects of [3, 4]) {
+    let calls = 0;
+    const responses = [];
+    const cache = new TerminalUpdates({
+      transport: async () => {
+        const response =
+          calls++ < redirects
+            ? new Response('redirect', {
+                status: 302,
+                headers: { location: url + '?hop=' + calls },
+              })
+            : Response.json({ payload: 'signed' });
+        responses.push(response);
+        return response;
+      },
+    });
+    if (redirects === 3) assert.deepEqual(await cache.json(url, 100), { payload: 'signed' });
+    else await assert.rejects(cache.json(url, 100), /Too many release redirects/);
+    assert.equal(calls, 4);
+    assert.ok(responses.every((response) => response.bodyUsed && !response.body.locked));
+  }
+  let calls = 0;
+  const metadata = new TerminalUpdates({
+    transport: async () => {
+      calls++;
+      return new Response(null, { status: 302, headers: { location: url } });
+    },
+  });
+  await assert.rejects(metadata.manifest(), /Invalid release redirect/);
+  assert.equal(calls, 1);
 });
 
 test('telemetry receipt time and expiry are server owned', () => {

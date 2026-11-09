@@ -54,7 +54,9 @@ text: |
 verification: |
   Use injected clocks and fetch responses to count shared requests, check success
   and failure cache deadlines, null/stale fallback, byte/time/redirect bounds and
-  credential-free fetches. Validate telemetry field types, enums, lengths and server
+  credential-free fetches. Check response body cancellation and reader release on
+  success, HTTP errors, redirects, oversize, malformed JSON and stream failure;
+  cleanup errors shall not mask the original failure. Validate telemetry field types, enums, lengths and server
   receipt time. Test maintenance at ages -1, 0, 60000 and 60001 milliseconds and
   each phase, with SIP 480 before forwarding for either participant. HTTP tests
   shall assert Terminal-only access and independent hardware/updater preservation.

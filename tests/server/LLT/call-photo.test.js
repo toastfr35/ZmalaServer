@@ -1,12 +1,12 @@
 // @test S-LLT-066
 // @requirements LLR-SRV-MEDIA-016
 // @environment portable
-// @plan Exercise the live-call route with bounded streams and delayed decoding. Check participants, account kinds, connected state, sender-only mutations, image revision, expiry, stop/end/revocation races and failure recovery. Retain a dialog across close and a failing relay teardown; assert access revocation and photo release.
+// @plan Exercise the live-call route with bounded/delayed streams, a controlled clock and delayed decoding. Check participants, account kinds, sender-only mutations, image revision, the exact 12000 ms lease and stale renewals, global/per-dialog contention, stop/end/revocation races before and after decoding and slot recovery. Retain a dialog across close and a failing relay teardown; assert access revocation and photo release.
 // @pass Only current authorized participants retrieve photos; stop, expiry and late work cannot resurrect a share or affect another call. No media operation is invoked.
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { Readable } = require('node:stream');
+const { Readable, PassThrough } = require('node:stream');
 const { callPhotoRoute, MAX_BYTES } = require('../../../zmala_server/call-photo');
 const { response, storeFixture } = require('../../support/server/unit-fixture');
 
@@ -28,7 +28,7 @@ function fixture() {
     bytes = Buffer.from('image'),
     convert = async (b) => b,
   ) => {
-    const req = Readable.from([bytes]);
+    const req = bytes instanceof Readable ? bytes : Readable.from([bytes]);
     req.method = method;
     const res = response();
     await callPhotoRoute(
@@ -99,6 +99,99 @@ test('oversized and failed uploads release the processing slot', async () => {
     }),
   );
   assert.equal((await f.invoke('PUT')).json().sharing, true);
+});
+
+test('uploads cancelled while arriving never start conversion and release their slot', async () => {
+  for (const action of ['stop', 'end', 'revoke', 'revoke-peer']) {
+    const f = fixture();
+    const upload = new PassThrough();
+    const pending = f.invoke('PUT', 'app', '', upload, async () => {
+      assert.fail('obsolete upload must not start conversion');
+    });
+    assert.equal(f.dialog.photoShare.uploading, true);
+    if (action === 'stop') await f.invoke('DELETE');
+    if (action === 'end') f.context.sipServer.dialogs.clear();
+    if (action === 'revoke') f.users.app.device_token = 'changed';
+    if (action === 'revoke-peer') f.users.term.device_token = 'changed';
+    upload.end(Buffer.from('image'));
+    await assert.rejects(pending, { status: 409 });
+    assert.equal(f.dialog.photoShare.bytes, null);
+    assert.equal(f.dialog.photoShare.sender, null);
+    assert.equal(f.dialog.photoShare.uploading, false);
+    assert.equal((await fixture().invoke('PUT')).json().sharing, true);
+  }
+});
+
+test('photo lease renews only the active revision and expires at exactly 12000 ms', async (t) => {
+  let now = 1000;
+  t.mock.method(Date, 'now', () => now);
+  const f = fixture();
+  const first = (await f.invoke('PUT')).json();
+  assert.equal(first.lease_ms, 12000);
+  assert.equal(first.remaining_ms, 12000);
+  now += 11999;
+  const stale = (await f.invoke('POST', 'app', '&revision=999')).json();
+  assert.equal(stale.remaining_ms, 1);
+  const renewed = (await f.invoke('POST', 'app', '&revision=' + first.revision)).json();
+  assert.equal(renewed.remaining_ms, 12000);
+  now += 11999;
+  assert.equal((await f.invoke()).json().sharing, true);
+  now++;
+  const expired = (await f.invoke('POST', 'app', '&revision=' + first.revision)).json();
+  assert.equal(expired.sharing, false);
+  assert.equal(expired.sender, null);
+  assert.equal(expired.revision, first.revision + 1);
+  assert.equal(expired.remaining_ms, 0);
+  await assert.rejects(f.invoke('GET', 'term', '&image=1&revision=' + first.revision), {
+    status: 404,
+  });
+});
+
+test('two global decoder slots reject a third call and recover after a failed conversion', async () => {
+  const first = fixture(),
+    second = fixture(),
+    third = fixture();
+  const gates = [Promise.withResolvers(), Promise.withResolvers()];
+  const started = [Promise.withResolvers(), Promise.withResolvers()];
+  const start = (f, i) =>
+    f.invoke('PUT', 'app', '', Buffer.from('image'), () => {
+      started[i].resolve();
+      return gates[i].promise;
+    });
+  const uploads = [start(first, 0)];
+  try {
+    await started[0].promise;
+    // Exercise the per-dialog limit while the second global slot is still free.
+    await assert.rejects(first.invoke('PUT'), { status: 429 });
+    uploads.push(start(second, 1));
+    await started[1].promise;
+    await assert.rejects(third.invoke('PUT'), { status: 429 });
+    const rejected = assert.rejects(uploads[0], /decode failed/);
+    gates[0].reject(Error('decode failed'));
+    await rejected;
+    assert.equal((await third.invoke('PUT')).json().sharing, true);
+    gates[1].resolve(Buffer.from('second photo'));
+    assert.equal((await uploads[1]).json().sharing, true);
+  } finally {
+    for (const gate of gates) gate.resolve(Buffer.from('cleanup'));
+    await Promise.allSettled(uploads);
+  }
+});
+
+test('a replacement upload reports no lease until new bytes are published', async (t) => {
+  t.mock.method(Date, 'now', () => 1000);
+  const f = fixture();
+  await f.invoke('PUT');
+  const upload = new PassThrough();
+  const pending = f.invoke('PUT', 'app', '', upload);
+  try {
+    const status = (await f.invoke()).json();
+    assert.equal(status.sharing, false);
+    assert.equal(status.remaining_ms, 0);
+  } finally {
+    upload.end(Buffer.from('replacement'));
+    await pending;
+  }
 });
 
 test('configuration advertises sharing and contact account types', (t) => {

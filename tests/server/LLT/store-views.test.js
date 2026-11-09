@@ -1,7 +1,7 @@
 // @test S-LLT-019
 // @requirements LLR-SRV-START-007, LLR-SRV-DIR-024, LLR-SRV-DIR-027, LLR-SRV-DIR-028, LLR-SRV-DIR-032, LLR-SRV-APP-003, LLR-SRV-CONFIG-021, LLR-SRV-CONFIG-022, LLR-SRV-ENROLL-005
 // @environment portable
-// @plan Create isolated accounts, mutate revisions and reassign serials; assert random independent credentials, private cached terminal and phone directory views, compare-and-set settings, device-owned profiles and bootstrap identity. Check that each Terminal receives its own portrait and a removal advances the configuration revision. Feed network-interface fixtures to check LAN address preference and fallback.
+// @plan Create isolated accounts, mutate revisions and reassign serials; assert random independent credentials, private cached terminal and phone directory views, ordering shared across accounts and invalidated by edits, compare-and-set settings, device-owned profiles and bootstrap identity. Check that each Terminal receives its own portrait and a removal advances the configuration revision. Feed network-interface fixtures to check LAN address preference and fallback.
 // @pass Every identity, privacy, invalidation and rejected-write assertion must pass; HTTP active-call exclusion is checked separately.
 
 'use strict';
@@ -61,6 +61,29 @@ test('derived views reuse stable computation and invalidate after edits without 
   assert.equal(build.mock.callCount(), 2);
   s.deleteGroup('family');
   assert.equal(s.contacts('term1')[0].can_call, false);
+});
+
+test('account ordering is shared across device views and rebuilt after membership or name edits', (t) => {
+  const s = storeFixture(t);
+  s.updateAccount('term1', { type: 'terminal', name: 'Room 10' });
+  s.updateAccount('phone1', { type: 'app', name: 'Room 2' });
+  s.createAccount({ id: 'another', type: 'app', name: 'room 2', emails: ['another@example.test'] });
+  const compare = t.mock.fn(s.directory.collator.compare);
+  s.directory.collator = { compare };
+  const ids = (user) => s.directory.contacts(user).map((contact) => contact.id);
+  assert.deepEqual(ids('term1'), ['another', 'phone1']);
+  const comparisons = compare.mock.callCount();
+  assert.ok(comparisons > 0);
+  assert.deepEqual(ids('phone1'), ['another', 'term1']);
+  assert.deepEqual(ids('another'), ['phone1', 'term1']);
+  assert.equal(compare.mock.callCount(), comparisons, 'other device views reuse the ordering');
+  s.updateAccount('term1', { type: 'terminal', name: 'Room 1' });
+  assert.deepEqual(ids('another'), ['term1', 'phone1']);
+  assert.ok(compare.mock.callCount() > comparisons);
+  s.createAccount({ id: 'last', type: 'app', name: 'Room 20', emails: ['last@example.test'] });
+  assert.deepEqual(ids('another'), ['term1', 'phone1', 'last']);
+  s.deleteAccount('phone1');
+  assert.deepEqual(ids('another'), ['term1', 'last']);
 });
 
 test('Terminal configuration carries its own current portrait path', (t) => {

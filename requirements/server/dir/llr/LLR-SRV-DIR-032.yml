@@ -24,4 +24,7 @@ scope: Core
 text: |
   The server shall reuse stable permission and contact derivations within a configuration revision. A changed revision shall invalidate them. Live presence shall be added separately without altering cached contacts.
 verification: |
-  Count derivations across repeated reads, mutate returned live fields, then change configuration and check invalidation.
+  Count derivations across repeated reads and different device views, including
+  reuse of the shared account ordering. Mutate returned live fields, then rename,
+  add or remove accounts and change permissions; check revision invalidation and
+  that one caller cannot alter another caller's cached view.

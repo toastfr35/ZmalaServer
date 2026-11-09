@@ -2,6 +2,11 @@
 'use strict';
 // Public signed feed caching and independent updater telemetry. No approval queue.
 const API = 'https://api.github.com/repos/toastfr35/ZmalaTerminal/releases/latest';
+const CACHE_MS = 5 * 60 * 1000;
+const BACKOFF_MS = 60 * 1000;
+const FETCH_TIMEOUT_MS = 10000;
+const MAX_REDIRECTS = 3;
+const REDIRECTS = new Set([301, 302, 303, 307, 308]);
 const PHASES = new Set(['idle', 'request', 'updating', 'checking', 'rollback', 'recovery_failed']);
 /** @param {string} value */
 function publicAsset(value) {
@@ -23,6 +28,27 @@ function publicAsset(value) {
 }
 
 // @llr LLR-SRV-MAINT-022
+/** Limit received bytes before parsing; the caller owns cancellation of the body.
+ * @param {ReadableStream<Uint8Array>} stream @param {number} limit */
+async function readBoundedJson(stream, limit) {
+  const reader = stream.getReader();
+  const chunks = [];
+  let size = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.length;
+      if (size > limit) throw Error('Release response too large.');
+      chunks.push(Buffer.from(value));
+    }
+    return JSON.parse(Buffer.concat(chunks, size).toString('utf8'));
+  } finally {
+    reader.releaseLock();
+  }
+}
+
+// @llr LLR-SRV-MAINT-022
 class TerminalUpdates {
   /** @param {{clock?: () => number, transport?: typeof fetch}} [options] */
   constructor({ clock = Date.now, transport = fetch } = {}) {
@@ -36,36 +62,27 @@ class TerminalUpdates {
   }
   /** @param {string} url @param {number} limit */
   async json(url, limit) {
-    for (let redirects = 0; redirects <= 3; redirects++) {
+    for (let redirects = 0; redirects <= MAX_REDIRECTS; redirects++) {
       if (url !== API && !publicAsset(url)) throw Error('Invalid release address.');
       const response = await this.transport(url, {
         redirect: 'manual',
-        signal: AbortSignal.timeout(10000),
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
         headers: { 'User-Agent': 'ZmalaCall-server-updates', Accept: 'application/json' },
       });
-      if ([301, 302, 303, 307, 308].includes(response.status)) {
-        const next = response.headers.get('location');
-        await response.body?.cancel();
-        if (url === API || !next || !publicAsset(next)) throw Error('Invalid release redirect.');
-        url = next;
-        continue;
-      }
-      if (!response.ok || !response.body) throw Error('Release unavailable.');
-      const reader = response.body.getReader();
-      const chunks = [];
-      let size = 0;
       try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          size += value.length;
-          if (size > limit) throw Error('Release response too large.');
-          chunks.push(Buffer.from(value));
+        if (REDIRECTS.has(response.status)) {
+          const next = response.headers.get('location');
+          if (url === API || !next || !publicAsset(next)) throw Error('Invalid release redirect.');
+          url = next;
+          continue;
         }
+        if (!response.ok || !response.body) throw Error('Release unavailable.');
+        return await readBoundedJson(response.body, limit);
       } finally {
-        await reader.cancel();
+        // Release rejected/redirected bodies too. Cleanup must not hide the fetch
+        // or validation error, including when the timeout has already errored the stream.
+        await response.body?.cancel().catch(() => {});
       }
-      return JSON.parse(Buffer.concat(chunks).toString('utf8'));
     }
     throw Error('Too many release redirects.');
   }
@@ -88,11 +105,12 @@ class TerminalUpdates {
     this.pending = this.refresh()
       .then((value) => {
         this.value = value;
-        this.expires = this.clock() + 300000;
+        this.expires = this.clock() + CACHE_MS;
         return value;
       })
       .catch((error) => {
-        this.expires = this.clock() + 60000;
+        // Waiters see the failure; later reads reuse the last value during backoff.
+        this.expires = this.clock() + BACKOFF_MS;
         throw error;
       })
       .finally(() => {
