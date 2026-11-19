@@ -48,15 +48,14 @@ class AdminPassword {
     } else if (fs.existsSync(this.file)) {
       throw Error('Invalid admin password file.');
     } else if (oldFile || legacyHash) {
-      // Persist before the caller removes the old field: migration must never
-      // discard the only durable copy of an existing password.
+      // Store removes the legacy hash from server.json after this migration succeeds.
       const previous = oldFile
         ? readJson(oldFile, { password_hash: '' }).password_hash
         : legacyHash;
       this.setHash(previous || '');
     }
     // Remove the migrated local copy so deleting the boot file cannot restore
-    // the old password on the following startup. The target must be durable first.
+    // the old password on the following startup.
     if (oldFile) fs.unlinkSync(oldFile);
   }
   /** @param {string} hash */

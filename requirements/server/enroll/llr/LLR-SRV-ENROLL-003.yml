@@ -19,7 +19,8 @@ reviewed: null
 scope: Core
 text: |
   Wi-Fi setup shall accept an SSID containing 1 through 32 UTF-8 bytes, excluding
-  U+0000 through U+001F and U+007F. Security shall be WPA (the default) or nopass;
+  U+0000 through U+001F and U+007F. The server shall reject unpaired surrogates
+  before encoding the SSID. Security shall be WPA (the default) or nopass;
   hidden shall be boolean and default to false. WPA passwords shall contain either
   8 through 63 printable ASCII characters or exactly 64 hexadecimal digits. An open
   network shall have an empty password. Invalid input shall fail before generating

@@ -28,7 +28,7 @@ class ConsoleJobs {
   async flush() {
     await this.persistence?.flush();
   }
-  // "Lost" means unknown outcome, not safe to retry: commands may have external side effects.
+  // A lost job may have run on the terminal. Keep it out of the claim queue.
   // @llr LLR-SRV-MAINT-015
   expire() {
     let changed = false;
@@ -134,7 +134,7 @@ class ConsoleJobs {
     job.status = 'running';
     job.shell ??= 'powershell';
     job.started_at = new Date().toISOString();
-    // Persist the claim before replying so another poll cannot receive the same command.
+    // The running state excludes competing polls. The HTTP route awaits flush before replying.
     job.lease = crypto.randomBytes(24).toString('hex');
     this.save();
     return {

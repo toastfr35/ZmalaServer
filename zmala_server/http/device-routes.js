@@ -1,6 +1,5 @@
 // @ts-check
 'use strict';
-// Device API routes use the bearer token identity, not a terminal ID supplied by the request.
 const { callPhotoRoute } = require('../call-photo');
 const developerAccess = require('../developer-access');
 const { terminalStatus } = require('../terminal-status');
@@ -27,7 +26,7 @@ async function liveConfiguration(id, { store, sipServer, callbacks }) {
   return config;
 }
 
-/** Identity comes exclusively from the bearer token, never from a requested terminal ID.
+/** The common HTTP handler resolves the device identity from the bearer token.
  * @param {import('node:http').IncomingMessage} req
  * @param {import('node:http').ServerResponse} res @param {URL} url
  * @param {import('../types/http').DeviceContext} context */
@@ -54,7 +53,10 @@ async function deviceRoutes(req, res, url, context) {
     if (!store.terminalAccount(deviceId)) throw httpError(403, 'A terminal account is required.');
     if (url.pathname === '/api/terminal-updates/manifest' && req.method === 'GET') {
       if (!context.terminalUpdates) throw httpError(503, 'Update feed unavailable.');
-      return send(res, 200, { manifest: await context.terminalUpdates.manifest() });
+      const manifest = await context.terminalUpdates.manifest().catch(() => {
+        throw httpError(503, 'Update feed unavailable.');
+      });
+      return send(res, 200, { manifest });
     }
     if (url.pathname === '/api/terminal-updates/status' && req.method === 'POST') {
       const update = updateStatus(await readJson(req, 4096));

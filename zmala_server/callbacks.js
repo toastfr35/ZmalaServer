@@ -244,7 +244,6 @@ class Callbacks {
         continue;
       this.sending.add(r.id);
       this.retry.set(r.id, Date.now() + 60000);
-      const text = `Zmala: ${this.store.value.users[r.from].name} would like you to call back.\nCall sip:${r.from}@${this.store.value.host}\nRequest expires at ${r.expires_at}.`;
       const operation = Promise.resolve()
         .then(async () => {
           await this.flush();
@@ -253,9 +252,13 @@ class Callbacks {
             !this.requests.includes(r) ||
             r.status !== 'pending' ||
             Date.parse(r.expires_at) <= Date.now() ||
+            this.store.terminal(r.to) ||
             !this.store.permitted(r.from, r.to)
           )
             return false;
+          // An account rename or deadline edit during the write also changes the notice.
+          const { users, host } = this.store.value;
+          const text = `Zmala: ${users[r.from].name} would like you to call back.\nCall sip:${r.from}@${host}\nRequest expires at ${r.expires_at}.`;
           return this.sip.notifyCallback(r, text);
         })
         .then(async (ok) => {

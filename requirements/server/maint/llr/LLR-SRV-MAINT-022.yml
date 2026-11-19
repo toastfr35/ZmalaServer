@@ -25,7 +25,7 @@ scope: Experimental
 text: |
   The server shall share one in-flight unauthenticated public manifest refresh
   among concurrent requests. It shall cache a successful result, including no
-  manifest, for five minutes. A failed refresh shall reject its waiting requests
+  manifest, for five minutes. A failed refresh shall return HTTP 503 to its waiting requests
   and postpone another refresh for one minute; reads during that backoff shall
   return the previously cached value, or null before any successful fetch.
 

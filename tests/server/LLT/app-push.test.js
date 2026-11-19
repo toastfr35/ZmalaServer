@@ -1,6 +1,7 @@
 // @test S-LLT-061
 // @requirements LLR-SRV-APP-005
 // @environment portable
+// Verify unread provider bodies are cancelled and malformed provider errors retain a retryable diagnosis.
 // @plan Register and replace push destinations in a private store; check account/enrollment scope, expiry, HMAC payloads and invalid-token removal. Mock Google's endpoints to verify signed OAuth scope, caching, shared concurrent refresh, failed/malformed refresh recovery, stale-401 isolation and high-priority data-only sends. Drive pending calls through registration, foreign/valid CANCEL, decline, expiry, revocation, failure and shutdown without allocating media.
 // @pass Only current App enrollments receive signed pushes; cancelled/expired/revoked waits cannot resume, deadlines and duplicate call IDs are bounded, and credentials remain outside backups.
 'use strict';
@@ -238,6 +239,28 @@ function oauthSender() {
   return sender;
 }
 
+test('unused Firebase response bodies are released even when cancellation fails', async (t) => {
+  const sender = oauthSender();
+  let status = 503;
+  const cancel = t.mock.fn(() => {
+    throw Error('cleanup failed');
+  });
+  t.mock.method(
+    global,
+    'fetch',
+    async () => new Response(new ReadableStream({ cancel }), { status }),
+  );
+  await assert.rejects(sender.authorization(), {
+    message: 'Firebase sender authorization failed.',
+  });
+  assert.equal(cancel.mock.calls.length, 1);
+  status = 200;
+  sender.access = 'cached';
+  sender.expires = Date.now() + 3600000;
+  await sender.send('fixture-token', {});
+  assert.equal(cancel.mock.calls.length, 2);
+});
+
 test('concurrent push authorizations share one refresh and reuse its cached token', async (t) => {
   const sender = oauthSender();
   let release;
@@ -318,4 +341,18 @@ test('late FCM rejection of an old token cannot invalidate a newer authorization
   await assert.rejects(second);
   assert.equal(await sender.authorization(), 'new-token');
   assert.equal(refreshes, 1);
+});
+
+test('malformed provider errors leave the push destination eligible for retry', async (t) => {
+  const sender = oauthSender();
+  sender.access = 'cached';
+  sender.expires = Date.now() + 3600000;
+  let detail;
+  t.mock.method(global, 'fetch', async () => Response.json(detail, { status: 503 }));
+  for (detail of [null, { error: { details: 'unavailable' } }, { error: { details: [null] } }]) {
+    await assert.rejects(sender.send('fixture-token', {}), {
+      message: 'Firebase delivery failed.',
+      invalid: false,
+    });
+  }
 });

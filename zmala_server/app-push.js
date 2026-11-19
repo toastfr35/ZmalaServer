@@ -19,8 +19,7 @@ class FcmSender {
   }
   async authorization() {
     if (this.access && this.expires > Date.now() + 60000) return this.access;
-    // Concurrent incoming calls share one bounded OAuth request. Clear only
-    // this promise: a rejected refresh must not strand a later retry.
+    // Calls and callback reminders share a refresh until it settles.
     const pending = this.authorizationPending || this.refreshAuthorization();
     this.authorizationPending = pending;
     try {
@@ -55,7 +54,10 @@ class FcmSender {
         assertion: assertion + '.' + signature,
       }),
     });
-    if (!response.ok) throw Error('Firebase sender authorization failed.');
+    if (!response.ok) {
+      await response.body?.cancel().catch(() => {});
+      throw Error('Firebase sender authorization failed.');
+    }
     const result = await response.json();
     const expires = Number(result?.expires_in);
     if (
@@ -90,11 +92,13 @@ class FcmSender {
     }
     if (!response.ok) {
       const result = await response.json().catch(() => ({}));
-      const invalid = result.error?.details?.some(
-        (/** @type {{errorCode?: string}} */ d) => d.errorCode === 'UNREGISTERED',
-      );
-      throw Object.assign(Error('Firebase delivery failed.'), { invalid: !!invalid });
+      const details = result?.error?.details;
+      const invalid =
+        Array.isArray(details) && details.some((d) => d?.errorCode === 'UNREGISTERED');
+      throw Object.assign(Error('Firebase delivery failed.'), { invalid });
     }
+    // A successful send returns a message ID that the server does not store.
+    await response.body?.cancel().catch(() => {});
   }
 }
 

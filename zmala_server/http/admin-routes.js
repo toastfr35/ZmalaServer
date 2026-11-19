@@ -1,6 +1,5 @@
 // @ts-check
 'use strict';
-// Administrator-only operations; handler.js authenticates the caller before dispatching here.
 const { wifiPayload, serverPayload, compactServerPayload, setupPdf } = require('../setup-pdf');
 const { send: sendResponse, readJson, httpError } = require('./responses');
 const developerAccess = require('../developer-access');
@@ -48,8 +47,8 @@ async function adminRoutes(req, res, url, context) {
   }
   /** @param {Parameters<typeof sendResponse>} args */
   async function send(...args) {
-    // A success response promises that every queued configuration revision is
-    // saved. Disk waits yield to SIP/UDP processing instead of blocking it.
+    // Each mutation waits for the files it owns. A failed console write, for
+    // example, should not prevent an unrelated group edit from succeeding.
     if (req.method !== 'GET') {
       const route = url.pathname;
       if (route.startsWith('/api/terminals/')) await consoleJobs.flush();

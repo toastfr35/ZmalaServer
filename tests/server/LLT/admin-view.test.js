@@ -3,6 +3,7 @@
 // @environment display
 // @plan Render the actual admin HTML/CSS/controllers in headless Chromium with every API replaced by a deterministic fixture. Verify fixed C10/C20 media information without camera, microphone or speaker selectors. Check GIF guidance and first-frame dimensions against accepted and rejected synthetic files. Check six English pages and sign-in at 320, 390, 700 and 1920 pixels, narrow labelled rows, touch sizes, modal scrolling, focused drafts and editor-local errors/cancellation. Check readable supporting text and desktop action targets, name-first terminal choices, unsaved-state feedback and a save bar that stays within the viewport while scrolled.
 // Switch appearance with the keyboard, verify persistence across navigation, and inspect both themes. Verify Device details is first and the other terminal sections open individually.
+// Filter the account list and check that re-created rows show a decoded portrait or the account initial.
 // @pass All computed layout and interaction assertions must pass against the mocked API; no live service or account is changed.
 
 'use strict';
@@ -67,7 +68,11 @@ test('admin component fits phones and desktop and preserves modal drafts', async
       await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
       return;
     }
-    if (name === '/zmala-mark-transparent.png') {
+    if (name === '/photos/b.png') {
+      await route.fulfill({ status: 404, body: '' });
+      return;
+    }
+    if (name === '/zmala-mark-transparent.png' || name === '/photos/a.png') {
       await route.fulfill({
         contentType: 'image/png',
         path: path.resolve(__dirname, '../../../zmala_server/assets/zmala-mark-transparent.png'),
@@ -91,6 +96,20 @@ test('admin component fits phones and desktop and preserves modal drafts', async
           : 'text/html';
     await route.fulfill({ status: 200, contentType, body: coverage.browserSource(file) });
   });
+  model.users.term1.photo = '/photos/a.png';
+  model.users.phone1.photo = '/photos/b.png';
+  await page.goto('http://zmala.test/accounts');
+  const search = page.getByRole('searchbox');
+  await search.fill('phone1');
+  await page.locator('#account-rows .avatar').filter({ hasText: /^P$/ }).waitFor();
+  await search.fill('term1');
+  await page.waitForFunction(() => {
+    const image = document.querySelector('#account-rows .avatar img');
+    return image?.getAttribute('src') === '/photos/a.png' && image.naturalWidth > 0;
+  });
+  delete model.users.term1.photo;
+  delete model.users.phone1.photo;
+
   for (const width of [320, 390, 700, 1920]) {
     await page.setViewportSize({ width, height: 800 });
     await page.goto('http://zmala.test/');

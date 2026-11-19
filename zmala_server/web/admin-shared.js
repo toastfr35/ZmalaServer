@@ -110,51 +110,25 @@ export function link(text, url, cls = 'text-link') {
 export function badge(text, cls = '') {
   return el('span', text, 'badge ' + cls);
 }
-/** @type {Map<string, Promise<Blob>>} */
-const photoRequests = new Map();
-/** Share a bounded immutable blob cache across account row rebuilds.
- * @param {string} path */
-function photoBlob(path) {
-  let request = photoRequests.get(path);
-  if (!request) {
-    request = fetch(path)
-      .then((response) => {
-        if (!response.ok) throw Error('Photo unavailable');
-        return response.blob();
-      })
-      .catch((error) => {
-        photoRequests.delete(path);
-        throw error;
-      });
-    if (photoRequests.size >= 40) {
-      const oldest = photoRequests.keys().next().value;
-      if (oldest !== undefined) photoRequests.delete(oldest);
-    }
-  }
-  photoRequests.delete(path);
-  photoRequests.set(path, request);
-  return request;
-}
 /** @param {Pick<import('../types/contracts').Account, 'name' | 'type' | 'photo'>} u */
 export function avatar(u) {
-  const a = el(
+  const initial = u.name.charAt(0).toUpperCase();
+  const portrait = el(
     'span',
-    u.name.charAt(0).toUpperCase(),
+    initial,
     'avatar ' + (u.type === 'terminal' ? 'terminal-avatar' : ''),
   );
-  if (u.photo)
-    photoBlob(u.photo)
-      .then((blob) => {
-        if (!a.isConnected) return;
-        const url = URL.createObjectURL(blob);
-        const img = el('img');
-        state.photoUrls.set(img, url);
-        img.src = url;
-        img.alt = u.name;
-        a.replaceChildren(img);
-      })
-      .catch(() => {});
-  return a;
+  if (u.photo) {
+    // The browser shares the private, immutable image across rows and cached terminal cards.
+    const image = el('img');
+    image.alt = u.name;
+    image.onerror = () => {
+      portrait.textContent = initial;
+    };
+    image.src = u.photo;
+    portrait.replaceChildren(image);
+  }
+  return portrait;
 }
 /** @param {string} title @param {string} text @param {Node} [action] */
 export function empty(title, text, action) {
@@ -257,14 +231,6 @@ for (const dialog of document.querySelectorAll('dialog'))
 /** @param {Node[]} elements */
 export function setView(...elements) {
   $('view').replaceChildren(...elements);
-  // Detached terminal cards retain unsaved forms and their photos when switching
-  // the dropdown. Revoke only pictures no longer owned by a live or cached view.
-  for (const [image, url] of state.photoUrls) {
-    if (image.isConnected || [...state.terminalCards.values()].some((card) => card.contains(image)))
-      continue;
-    URL.revokeObjectURL(url);
-    state.photoUrls.delete(image);
-  }
 }
 
 // @llr LLR-SRV-DIR-033

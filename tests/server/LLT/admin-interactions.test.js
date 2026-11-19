@@ -1,7 +1,7 @@
 // @test S-LLT-001
 // @requirements LLR-SRV-BACKUP-012, LLR-SRV-UI-014, LLR-SRV-UI-016, LLR-SRV-UI-018, LLR-SRV-UI-019, LLR-SRV-HOST-004
 // @environment portable
-// @plan Execute admin handlers with a small DOM/API double; assert focused row-action preservation during polling, revision ownership, stale modal-result rejection, clipboard cleanup and explicit backup confirmation before restore. Check portrait cache bounds/retries and URL ownership, confirmation error recovery, backup validation/restart failures, live overview/activity and SSH toggle errors, console output rendering and queued-command deletion.
+// @plan Execute admin handlers with a small DOM/API double; assert focused row-action preservation during polling, revision ownership, stale modal-result rejection, clipboard cleanup and explicit backup confirmation before restore. Check portrait loading and fallback, confirmation error recovery, backup validation/restart failures, live overview/activity and SSH toggle errors, console output rendering and queued-command deletion.
 // @pass All named assertion cases must pass; skips and visual/hardware checks are recorded separately.
 
 'use strict';
@@ -111,7 +111,6 @@ function sharedFixture() {
       terminal_statuses: { term: { last_seen: new Date().toISOString(), state: 'idle' } },
       callbacks: [],
     },
-    photoUrls: new Map(),
     terminalCards: new Map(),
     refresh: async () => {},
     renderConnection: () => {},
@@ -142,41 +141,25 @@ function sharedFixture() {
   return { context, node, $, requests, revoked };
 }
 
-test('shared photo cache deduplicates, bounds entries, retries failures and retains owned URLs', async () => {
+test('account portraits use the private image route and fall back to initials on failure', () => {
   const f = sharedFixture(),
     c = f.context;
-  c.response = { ok: true, blob: async () => ({ bytes: 'picture' }) };
   const account = { name: 'Alice', type: 'terminal', photo: '/photos/a.png' };
-  const first = c.avatar(account),
-    second = c.avatar(account);
-  await new Promise(setImmediate);
-  assert.equal(f.requests.length, 1);
-  assert.equal(first.children[0].alt, 'Alice');
-  assert.equal(second.children[0].src, 'blob:unit');
-  const detached = c.avatar(account);
-  detached.isConnected = false;
-  await new Promise(setImmediate);
-  assert.equal(detached.children.length, 0);
-  for (let i = 0; i < 41; i++) await c.photoBlob('/photos/' + i + '.png');
-  await c.photoBlob(account.photo);
-  assert.equal(f.requests.filter((p) => p === account.photo).length, 2);
-  c.response = { ok: false };
-  c.avatar({ ...account, photo: '/bad' });
-  await new Promise(setImmediate);
-  c.response = { ok: true, blob: async () => ({}) };
-  await c.photoBlob('/bad');
-  assert.equal(f.requests.filter((p) => p === '/bad').length, 2);
-  const removed = f.node('img'),
-    cached = f.node('img');
-  removed.isConnected = cached.isConnected = false;
-  c.state.photoUrls.set(removed, 'blob:removed');
-  c.state.photoUrls.set(cached, 'blob:cached');
-  const card = f.node('section');
-  card.append(cached);
-  c.state.terminalCards.set('term', card);
-  c.setView(f.node('main'));
-  assert.deepEqual(f.revoked, ['blob:removed']);
-  assert.equal(c.state.photoUrls.get(cached), 'blob:cached');
+  const portrait = c.avatar(account);
+  const img = portrait.children[0];
+  assert.equal(img.src, account.photo);
+  assert.equal(img.alt, account.name);
+  img.onerror();
+  assert.equal(portrait.textContent, 'A');
+  assert.equal(c.avatar({ ...account, photo: '' }).textContent, 'A');
+});
+
+test('shared components render contact status and empty views', () => {
+  const f = sharedFixture(),
+    c = f.context,
+    card = f.node('section');
+  c.setView(card);
+  assert.equal(f.$('view').children[0], card);
   assert.ok(c.liveSignature().includes('term'));
   assert.equal(c.registered('term'), true);
   assert.equal(c.empty('No accounts', 'Create one', card).children.at(-1), card);
