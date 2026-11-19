@@ -47,7 +47,12 @@ export function accountRows() {
       person = el('td'),
       cell = el('div', null, 'person-cell'),
       names = el('div');
-    names.append(el('strong', u.name), el('code', id));
+    // @llr LLR-SRV-UI-017
+    const identifier = el('code');
+    if (u.type === 'terminal')
+      identifier.append(link(id, '/terminals?terminal=' + encodeURIComponent(id)));
+    else identifier.textContent = id;
+    names.append(el('strong', u.name), identifier);
     names.append(
       el('small', u.emails?.length ? u.emails.join(', ') : 'Email address needed', 'muted'),
     );

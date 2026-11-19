@@ -484,6 +484,9 @@ export function renderTerminals() {
   select.value = state.terminalId;
   select.onchange = () => {
     state.terminalId = select.value;
+    const url = new URL(location.href);
+    url.searchParams.set('terminal', select.value);
+    history.replaceState(null, '', url);
     renderTerminals();
   };
   chooser.append(select);

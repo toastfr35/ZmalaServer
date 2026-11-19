@@ -15,6 +15,10 @@ references:
   type: file
 - path: tests/server/LLT/terminal-fields.test.js
   type: file
+- path: zmala_server/web/admin-accounts.js
+  type: file
+- path: zmala_server/web/admin-state.js
+  type: file
 - path: zmala_server/web/admin-main.js
   type: file
 - path: zmala_server/web/admin-pages.js
@@ -32,6 +36,7 @@ references:
 reviewed: null
 scope: Core
 text: |
+  Each Terminal account identifier on the Accounts page shall link to its selected device card on the Terminals page. App account identifiers shall remain plain text.
   The Terminals page shall select one device card and show expandable sections in the order Device details, Calls, Video, Audio and General. Device details shall open initially and group device status, account association and maintenance. Opening one section shall close the previously open section. Settings shall share a single form and retain drafts when switching sections. Account association shall submit separately.
   The device selector shall show the account name before its identifier. Connection,
   peripheral and call-feature status shall be visually grouped. A sticky save bar
@@ -45,6 +50,7 @@ text: |
   report, peripheral details shall show status unavailable rather than old healthy
   readings. Polling shall update status without closing the open section or discarding unsaved settings.
 verification: |
+  Follow a non-default terminal's account identifier and check that its device card opens. Verify an App identifier has no terminal link.
   Select different devices, inspect section order and controls, and save association separately from profile settings. Switch sections while a draft is dirty and verify saving from another section retains the values. Verify validation reopens a section with invalid input. Enumerate volume choices,
   open a between-step value and verify it is not saved until submission. Render
   fresh/unknown/stale peripheral reports and poll while a draft is dirty; verify
