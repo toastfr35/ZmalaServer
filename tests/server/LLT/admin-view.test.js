@@ -4,6 +4,7 @@
 // @plan Render the actual admin HTML/CSS/controllers in headless Chromium with every API replaced by a deterministic fixture. Verify fixed C10/C20 media information without camera, microphone or speaker selectors. Check GIF guidance and first-frame dimensions against accepted and rejected synthetic files. Check six English pages and sign-in at 320, 390, 700 and 1920 pixels, narrow labelled rows, touch sizes, modal scrolling, focused drafts and editor-local errors/cancellation. Check readable supporting text and desktop action targets, name-first terminal choices, unsaved-state feedback and a save bar that stays within the viewport while scrolled.
 // Switch appearance with the keyboard, verify persistence across navigation, and inspect both themes. Verify Device details is first and the other terminal sections open individually.
 // Filter the account list and check that re-created rows show a decoded portrait or the account initial.
+// Follow a non-default terminal identifier from Accounts and verify the selected device and subsequent selection on reload.
 // @pass All computed layout and interaction assertions must pass against the mocked API; no live service or account is changed.
 
 'use strict';
@@ -30,6 +31,12 @@ test('admin component fits phones and desktop and preserves modal drafts', async
   });
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
+  s.createAccount({
+    id: 'term2',
+    name: 'Second terminal',
+    type: 'terminal',
+    emails: ['second@example.test'],
+  });
   const model = {
     ...s.admin(),
     sip_status: {
@@ -109,6 +116,17 @@ test('admin component fits phones and desktop and preserves modal drafts', async
   });
   delete model.users.term1.photo;
   delete model.users.phone1.photo;
+  await search.fill('');
+  assert.equal(await page.getByRole('link', { name: 'phone1', exact: true }).count(), 0);
+  await page.getByRole('link', { name: 'term2', exact: true }).press('Enter');
+  const selector = page.getByLabel('Select terminal');
+  assert.equal(await selector.inputValue(), 'term2');
+  await page.getByRole('heading', { name: 'Second terminal', exact: true }).waitFor();
+  await selector.selectOption('term1');
+  await page.reload();
+  assert.equal(await selector.inputValue(), 'term1');
+  await page.goto('http://zmala.test/terminals?terminal=removed');
+  assert.equal(await selector.inputValue(), 'term1');
 
   for (const width of [320, 390, 700, 1920]) {
     await page.setViewportSize({ width, height: 800 });

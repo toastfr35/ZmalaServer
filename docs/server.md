@@ -421,6 +421,7 @@ and groups stay with accounts. Both accounts are checked for active calls.
 Renaming preserves linked records while changing the SIP address. Active calls
 also block credential/type changes and account deletion.
 
+On **Accounts**, select a terminal's identifier to open its device card on **Terminals**.
 Terminal selectors show the account name first. **Device details** opens
 first and contains connection, hardware, and call-feature status, account
 association with the full serial number, and **Setup & maintenance**.

@@ -46,7 +46,9 @@ export const state = {
   busy: false,
   initialized: false,
   detailsId: '',
-  terminalId: '',
+  // @llr LLR-SRV-UI-017
+  terminalId:
+    page === '/terminals' ? new URLSearchParams(location.search).get('terminal') || '' : '',
   editingGroupId: '',
   groupVersion: undefined,
   renderedVersion: undefined,
