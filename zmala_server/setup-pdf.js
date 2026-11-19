@@ -11,9 +11,9 @@ function wifiPayload({ ssid, password = '', security = 'WPA', hidden = false }) 
     typeof ssid !== 'string' ||
     !ssid ||
     Buffer.byteLength(ssid, 'utf8') > 32 ||
-    /[\x00-\x1f\x7f]/.test(ssid)
+    /[\x00-\x1f\x7f\p{Cs}]/u.test(ssid)
   )
-    throw Error('SSID must contain 1–32 UTF-8 bytes without control characters.');
+    throw Error('SSID must be valid Unicode, 1–32 UTF-8 bytes, without control characters.');
   if ((security !== 'WPA' && security !== 'nopass') || typeof hidden !== 'boolean')
     throw Error('Choose WPA/WPA2/WPA3 or an open network.');
   if (typeof password !== 'string' || /[\x00-\x1f\x7f]/.test(password))
@@ -30,9 +30,8 @@ function wifiPayload({ ssid, password = '', security = 'WPA', hidden = false }) 
   /** @param {string} value */
   const escape = (value) => value.replace(/[\\;,:"]/g, '\\$&');
   const standard = `WIFI:T:${security};S:${escape(ssid)};P:${escape(password)};H:${hidden};;`;
-  // The Windows SDK decoder has a 254-byte result and locale conversion.
-  // ASCII packaging preserves every UTF-8 SSID without either limitation.
-  if (/^[\x00-\x7f]+$/.test(standard) && Buffer.byteLength(standard) <= 254) return standard;
+  // The compact format carries UTF-8 SSIDs through scanners that return only ASCII reliably.
+  if (/^[\x00-\x7f]+$/.test(ssid)) return standard;
   const name = Buffer.from(ssid, 'utf8'),
     flags = (security === 'WPA' ? 1 : 0) | (hidden ? 2 : 0);
   return (

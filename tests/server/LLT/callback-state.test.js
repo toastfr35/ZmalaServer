@@ -1,6 +1,7 @@
 // @test S-LLT-016
 // @requirements LLR-SRV-CALLBACK-015, LLR-SRV-CALLBACK-016, LLR-SRV-CALLBACK-017, LLR-SRV-CALLBACK-018, LLR-SRV-CALLBACK-019
 // @environment portable
+// Hold persistence while a caller is renamed or a recipient becomes a Terminal, then check delivery.
 // @plan Drive callback storage with fake registration/notification responses; assert the 400-pending boundary, duplicate acceptance at capacity, deduplication, completion, expiry, permission changes, one notification after reconnect and retry with preserved renamed identity. Retire a requester and finish pending work without another creation; assert cancellation and a persisted 200-record completed-history cap. Exercise the real SIP notifier with a fake transport and clock: preserve UTF-8 and exact recipient flow, ignore provisional responses, accept only 2xx, and fail closed on rejection, timeout or send error.
 // @pass Every named assertion must pass; failures or skips do not establish requirement verification.
 
@@ -14,6 +15,35 @@ const fs = require('node:fs'),
   path = require('node:path');
 
 const flush = () => new Promise((r) => setImmediate(r));
+
+test('SIP callback uses the current caller and recipient type after persistence', async (t) => {
+  const { storeFixture } = require('../../support/server/unit-fixture');
+  for (const convertRecipient of [false, true]) {
+    const store = storeFixture(t);
+    const notifyCallback = t.mock.fn(async () => true);
+    const service = new Callbacks(store, {
+      registrations: new Map([['phone1', { expires: Date.now() + 60000 }]]),
+      notifyCallback,
+    });
+    const saved = Promise.withResolvers();
+    service.flush = () => saved.promise;
+    service.create('term1', 'phone1');
+    await flush();
+    assert.equal(service.sending.size, 1);
+    store.updateAccount('term1', { id: 'lounge', name: 'Evelyn', type: 'terminal' });
+    service.rename('term1', 'lounge');
+    if (convertRecipient) store.updateAccount('phone1', { name: 'Hall', type: 'terminal' });
+    saved.resolve();
+    await Promise.all(service.operations);
+    if (convertRecipient) {
+      assert.equal(notifyCallback.mock.calls.length, 0);
+      assert.equal(service.requests[0].notified_at, null);
+    } else {
+      assert.equal(notifyCallback.mock.calls.length, 1);
+      assert.match(notifyCallback.mock.calls[0].arguments[1], /Evelyn.*\nCall sip:lounge@/);
+    }
+  }
+});
 
 test('retired requester and completion trim history without waiting for another request', async (t) => {
   const { storeFixture } = require('../../support/server/unit-fixture');

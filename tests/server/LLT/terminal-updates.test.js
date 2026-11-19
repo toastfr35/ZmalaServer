@@ -1,6 +1,7 @@
 // @test S-LLT-068
 // @requirements LLR-SRV-MAINT-022
 // @environment portable
+// Poll through the authenticated HTTP handler during an outage and again during backoff.
 // @plan Use disposable public fetch responses and clocks to check shared refresh success/failure, exact cache/backoff deadlines, stale/null fallback and recovery, body cleanup, old releases, response/origin/three-redirect bounds, typed telemetry and maintenance expiry; render admin badges with a view double and invoke SIP with an authenticated updating target.
 // @pass Feed requests share one bounded unauthenticated fetch, malformed telemetry is rejected, maintenance expires after 60 seconds, and new SIP calls receive 480 before forwarding to an updating terminal.
 'use strict';
@@ -92,6 +93,34 @@ test('public manifest cache shares requests and enforces transport bounds', asyn
     transport: async () => new Response(JSON.stringify({ assets: [] })),
   });
   assert.equal(await old.manifest(), null);
+});
+
+test('terminal HTTP poll reports feed outages as unavailable and serves the cache during backoff', async (t) => {
+  const { context, request, response } = require('../../support/server/unit-fixture');
+  const { createHandler } = require('../../../zmala_server/http/handler');
+  const ctx = context(storeFixture(t));
+  const transport = t.mock.fn(async () => {
+    throw Error('upstream unavailable');
+  });
+  ctx.terminalUpdates = new TerminalUpdates({ transport });
+  const handler = createHandler(ctx);
+  const poll = async () => {
+    const res = response();
+    await handler(
+      request('/api/terminal-updates/manifest', {
+        headers: { authorization: 'Bearer ' + ctx.store.value.users.term1.device_token },
+      }),
+      res,
+    );
+    return res;
+  };
+  const failed = await poll();
+  assert.equal(failed.status, 503);
+  assert.equal(failed.json().error, 'Update feed unavailable.');
+  const cached = await poll();
+  assert.equal(cached.status, 200);
+  assert.deepEqual(cached.json(), { manifest: null });
+  assert.equal(transport.mock.calls.length, 1);
 });
 
 test('failed refresh rejects all waiters, backs off with stale or null data, then recovers', async () => {

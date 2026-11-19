@@ -19,8 +19,8 @@ hardware qualification boundaries.
 The subsequent [quality review](reviews/2026-11-09-quality.md) records clearer
 acceptance criteria and the remaining gaps in automated assertions.
 The later [code pass](https://github.com/toastfr35/ZmalaServer/pull/34) added the
-photo-lease/concurrency and update-cache boundary assertions. Remaining SIP and
-Wi-Fi payload assertions are tracked in
+photo-lease/concurrency and update-cache boundary assertions. The Wi-Fi payload
+suite now covers the SSID, password and encoding boundaries. Remaining SIP assertions are tracked in
 [issue #31](https://github.com/toastfr35/ZmalaServer/issues/31).
 
 ## Writing verifiable requirements

@@ -1,6 +1,7 @@
 // @test S-LLT-022
 // @requirements LLR-SRV-ENROLL-002, LLR-SRV-ENROLL-003, LLR-SRV-ENROLL-004
 // @environment portable
+// Exercise UTF-8 SSID boundaries, unpaired surrogates, WPA key lengths and maximum escaped ASCII payloads.
 // @plan Generate setup payloads and PDF bytes directly; reject invalid Wi-Fi input and decode compact UTF-8 identity.
 // Inspect Wi-Fi and Terminal sheets for one A5 face on landscape A4, full-width QR geometry, four-module quiet borders, logo, minimal text and no printed credentials.
 // Render both foldable sheets to verify the frame surrounds the A5 content and stays clear of the QR quiet zone.
@@ -86,6 +87,31 @@ test('foldable sheets show only branding, scan prompt and privacy note', async (
   }
 });
 
+test('Wi-Fi QR preserves admitted SSIDs and distinguishes WPA passphrases from hex keys', () => {
+  const open = { security: 'nopass' };
+  const ssid = '📶'.repeat(8);
+  const compact = wifiPayload({ ...open, ssid, hidden: true });
+  const bytes = Buffer.from(compact.split(':')[2], 'base64url');
+  assert.deepEqual([...bytes.subarray(0, 2)], [2, 32]);
+  assert.equal(bytes.subarray(2).toString('utf8'), ssid);
+  for (const invalid of ['', ssid + 'a', 'a\x00', '\x1f', '\x7f', '\ud800', '\udfff'])
+    assert.throws(() => wifiPayload({ ...open, ssid: invalid }), /SSID/);
+  const network = { ssid: 'A' };
+  for (const password of ['a'.repeat(8), 'z'.repeat(63), 'F0'.repeat(32)])
+    assert.equal(
+      wifiPayload({ ...network, password }),
+      'WIFI:T:WPA;S:A;P:' + password + ';H:false;;',
+    );
+  for (const password of ['a'.repeat(7), 'z'.repeat(64), 'a'.repeat(65)])
+    assert.throws(() => wifiPayload({ ...network, password }), /password/);
+  for (const invalid of [{ hidden: 'false' }, { hidden: null }, { security: 'unknown' }])
+    assert.throws(() => wifiPayload({ ...network, ...open, ...invalid }));
+  assert.equal(
+    wifiPayload({ ssid: ';'.repeat(32), password: '\\'.repeat(63) }),
+    'WIFI:T:WPA;S:' + '\\;'.repeat(32) + ';P:' + '\\\\'.repeat(63) + ';H:false;;',
+  );
+});
+
 test('Wi-Fi QR escaping, validation and printable PDF', async () => {
   const input = { ssid: 'Cafe;Wi:Fi\\"', password: 'Secret;:\\,"', hidden: true };
   const payload = wifiPayload(input);
@@ -119,8 +145,6 @@ test('Wi-Fi QR escaping, validation and printable PDF', async () => {
   ]) {
     const pdf = await setupPdf({ kind, label: input.ssid, payload: value });
     assert.equal(pdf.subarray(0, 5).toString(), '%PDF-');
-    // PDF byte size says
-    // nothing about whether the page and its QR code were actually generated.
     const source = pdf.toString('latin1');
     assert.match(source, /%%EOF\s*$/);
     assert.equal((source.match(/\/Type \/Page\b/g) || []).length, 1);

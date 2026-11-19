@@ -49,7 +49,6 @@ export const state = {
   terminalId: '',
   editingGroupId: '',
   groupVersion: undefined,
-  photoUrls: new Map(),
   renderedVersion: undefined,
   renderedLive: '',
   consoleId: '',

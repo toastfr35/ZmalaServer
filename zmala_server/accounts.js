@@ -1,10 +1,9 @@
 // @ts-check
 'use strict';
-// Account mutations share Store validation and persistence; terminal identity remains device-owned.
 const { random, profile } = require('./defaults');
 const { randomUUID } = require('node:crypto');
 const { own, accountId, accountFields, validateEmails } = require('./validation');
-/** Account mutations validate before changing state; Store supplies persistence and group queries. */
+/** Rename updates the account, profile and group references before Store records one revision. */
 class AccountStore {
   /** @param {import('./types/contracts').ServerState} value
    * @param {() => void} changed */

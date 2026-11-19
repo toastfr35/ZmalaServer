@@ -8,7 +8,6 @@ export interface AdminState {
   terminalId: string;
   editingGroupId: string;
   groupVersion?: number;
-  photoUrls: Map<HTMLImageElement, string>;
   renderedVersion?: number;
   renderedLive: string;
   consoleId: string;

@@ -1022,6 +1022,8 @@ omitting repeat metadata. Identical quantized frames may combine; conversion rej
 output that falls outside frame/byte/timing limits rather than publishing it.
 Hash-named authenticated GIF routes use image/gif, private immutable caching and
 participate in backup/restore alongside static images (the total backup cap still applies).
+The admin UI loads saved portraits from these routes. If an image fails to load,
+the account initial appears in its place.
 Terminal selection controls single playback, regardless of source loop settings.
 Android decodes a still first frame. No family media is part of the public source.
 
@@ -1085,7 +1087,7 @@ runtime requirements.
 
 `terminal-updates.js` shares one in-flight public manifest refresh and caches a
 successful result, including no manifest, for five minutes. A failed refresh
-rejects its waiting requests, then backs off for one minute. During backoff,
+returns HTTP 503 to its waiting requests, then backs off for one minute. During backoff,
 reads return the previous value, or null before the first success.
 
 Metadata is capped at 1 MiB and manifest JSON at 65536 bytes, with a ten-second
