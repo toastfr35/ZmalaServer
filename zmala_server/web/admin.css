@@ -1322,14 +1322,16 @@ input[type='file']::file-selector-button {
   display: none;
 }
 .terminal-section > summary::before {
-  content: '›';
-  color: var(--muted);
+  content: '';
+  flex: none;
+  border-block: 5px solid transparent;
+  border-left: 8px solid var(--muted);
 }
 .terminal-section[open] > summary {
   background: var(--raised);
 }
 .terminal-section[open] > summary::before {
-  content: '⌄';
+  transform: rotate(90deg);
 }
 .terminal-section > summary small {
   flex: 1 1 110px;
@@ -1417,13 +1419,6 @@ input[type='file']::file-selector-button {
   margin-top: 8px;
   line-height: 1.5;
 }
-.terminal-tools {
-  padding: 14px 22px;
-  border-top: 1px solid var(--line);
-}
-.terminal-tools > summary {
-  cursor: pointer;
-}
 .terminal-setup summary {
   cursor: pointer;
   padding: 11px 16px;
@@ -1445,7 +1440,7 @@ input[type='file']::file-selector-button {
 }
 .terminal-tools > .button-row {
   flex-wrap: wrap;
-  margin-top: 12px;
+  padding: 14px 22px;
 }
 .console-shell-controls {
   display: flex;
