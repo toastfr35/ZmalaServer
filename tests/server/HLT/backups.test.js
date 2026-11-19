@@ -1,7 +1,7 @@
 // @test S-HLT-006
 // @requirements HLR-SRV-BACKUP-001, HLR-SRV-BACKUP-002
 // @environment portable
-// @plan Populate the assembled service with accounts, credentials, histories and pictures, export and restore it, then reopen storage; compare all records and PNG/GIF photo bytes, verify restored credentials and command cancellation, and reject unsafe or unauthorized HTTP restores without mutation.
+// @plan Populate the assembled service with accounts, credentials, histories and pictures, export and restore it, then reopen storage; compare all records and PNG/GIF photo bytes, verify restored credentials and command cancellation, and reject unsafe or unauthorized HTTP restores without mutation. Damage and repair local portraits and verify staging resumes with a readable rollback archive.
 // @pass All named assertion cases must pass; skips and visual/hardware checks are recorded separately.
 
 'use strict';
@@ -88,6 +88,34 @@ test('backup round trip restores complete config, histories and pictures; creden
   );
   await recoverRestore(app.directory, app.store.adminPassword.file);
   assert.equal(new Store(app.directory).value.configuration_version, newerVersion + 1);
+});
+
+test('damaged local portraits block export and restore until a usable rollback copy can be made', async (t) => {
+  const app = await fixture(t);
+  const replacement = await decodeBackup(await app.backups.download());
+  const version = app.store.value.configuration_version;
+  const portrait = path.join(app.directory, app.store.value.users.term1.photo.slice(1));
+  fs.writeFileSync(portrait, gif());
+  await assert.rejects(app.backups.download(), /Picture filename checksum/);
+  await assert.rejects(app.backups.stage(replacement, version), /Picture filename checksum/);
+  assert.equal(fs.existsSync(path.join(app.directory, 'restore-recovery', 'pending.json')), false);
+  assert.equal((await fetch(app.base + '/ready')).status, 200);
+  assert.equal(app.sipServer.maintenance, false);
+  assert.equal(app.callbacks.paused, false);
+
+  fs.writeFileSync(portrait, PNG);
+  const damaged = Buffer.from(PNG);
+  damaged.writeUInt32BE(0, 16);
+  const invalid = path.join(app.directory, 'photos', digest(damaged) + '.png');
+  fs.writeFileSync(invalid, damaged);
+  await assert.rejects(app.backups.download(), /pixels/);
+
+  fs.unlinkSync(invalid);
+  await app.backups.stage(replacement, version);
+  const rollback = await decodeBackup(
+    fs.readFileSync(path.join(app.directory, 'restore-recovery', 'previous.zmala-backup')),
+  );
+  assert.deepEqual(rollback.files.get(app.store.value.users.term1.photo.slice(1)), PNG);
 });
 
 test('admin HTTP backup requires authentication, confirmation, current version and an idle server', async (t) => {

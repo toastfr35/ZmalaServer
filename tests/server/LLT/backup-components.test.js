@@ -403,7 +403,7 @@ test('photo snapshot checks regular-file type and size/count bounds before readi
   assert.equal(read.mock.calls.length, 2);
 });
 
-test('failed fsync closes the temporary file and never replaces the live destination', (t) => {
+test('failed fsync closes and removes the temporary file and preserves the live destination', (t) => {
   const file = path.join(storeFixture(t).dir, 'server.json');
   const previous = fs.readFileSync(file);
   const close = t.mock.method(fs, 'closeSync');
@@ -413,6 +413,7 @@ test('failed fsync closes the temporary file and never replaces the live destina
   assert.throws(() => atomicWrite(file, 'replacement'), /simulated full disk/);
   assert.equal(close.mock.calls.length, 1);
   assert.deepEqual(fs.readFileSync(file), previous);
+  assert.equal(fs.existsSync(file + '.restore-tmp'), false);
 });
 
 test('restore rejects unknown destinations and journals, and removes only obsolete photos', async (t) => {

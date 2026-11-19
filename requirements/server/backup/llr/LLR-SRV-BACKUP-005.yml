@@ -22,4 +22,5 @@ text: |
   Saved TV test results shall be validated against the Terminal device identity and TV model in the same backup. Valid results shall survive export and restore; results for another device or model shall be rejected.
 verification: |
   Mutate each structural boundary and verify validation fails with unchanged files and memory.
+  Damage a local portrait and verify export and rollback staging reject it before publishing a journal. Repair it and verify the rollback archive opens.
   Export, decode and restore a Terminal profile with completed TV tests; reject mismatched device identities and models before replacement. Retain compatibility with profiles without test results.
