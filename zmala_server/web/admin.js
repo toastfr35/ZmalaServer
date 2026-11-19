@@ -1896,21 +1896,14 @@ function appendTerminalHardware(summary, status, fresh) {
     'Remote battery',
     typeof battery === 'number' ? battery + '%' : 'Unknown',
   );
-  terminalDetail(
-    summary,
-    'Remote charger',
-    status?.remote_charger_connected === true
-      ? 'Connected'
-      : status?.remote_charger_connected === false
-        ? 'Not connected'
-        : 'Unknown',
-  );
-  terminalDetail(summary, 'C10/C20', camera[status?.camera_status || ''] || 'Unknown');
-  terminalDetail(
-    summary,
-    'C10/C20 power',
-    status?.camera_powered === true ? 'On' : status?.camera_powered === false ? 'Off' : 'Unknown',
-  );
+  const cameraState = status?.camera_status;
+  let cameraDetail = camera[cameraState || ''];
+  if (typeof status?.camera_powered === 'boolean') {
+    const power = status.camera_powered ? 'on' : 'off';
+    if (!cameraDetail) cameraDetail = 'Powered ' + power;
+    else if (cameraState !== power) cameraDetail += ' · Power ' + power;
+  }
+  terminalDetail(summary, 'C10/C20', cameraDetail || 'Unknown');
 }
 /** @param {HTMLElement} connection
  * @param {import('../types/contracts').TerminalUpdateStatus | undefined} update
@@ -2008,11 +2001,12 @@ function terminalCardState(card, id) {
       ),
     );
 }
-/** @param {HTMLElement} card @param {string} key @param {string} title @param {string} description */
+/** @param {HTMLElement} card @param {string} key @param {string} title @param {string} [description] */
 function terminalSection(card, key, title, description) {
   const section = el('details', null, 'terminal-section terminal-' + key);
   const heading = el('summary');
-  heading.append(el('span', title), el('small', description));
+  heading.append(el('span', title));
+  if (description) heading.append(el('small', description));
   section.append(heading);
   section.dataset.section = key;
   section.setAttribute('name', 'terminal-sections-' + terminalId(card));
@@ -2080,7 +2074,7 @@ function buildDevicesForm(card, id) {
     ),
     id,
   );
-  devices.append(saveBar);
+  devices.append(buildTerminalTools(card), saveBar);
   // A user can save from a different section after editing a numeric field.
   devices.addEventListener(
     'invalid',
@@ -2134,7 +2128,7 @@ function buildDevicesForm(card, id) {
 }
 /** @param {HTMLElement} card */
 function buildTerminalTools(card) {
-  const footer = el('details', null, 'terminal-tools');
+  const section = terminalSection(card, 'tools', 'Setup & maintenance');
   const tools = el('div', null, 'button-row');
   const setup = el('details', null, 'terminal-setup');
   setup.append(el('summary', 'Setup', 'secondary'));
@@ -2164,8 +2158,8 @@ function buildTerminalTools(card) {
       'terminal',
     ),
   );
-  footer.append(el('summary', 'Setup & maintenance'), tools);
-  return footer;
+  section.append(tools);
+  return section;
 }
 /** @param {HTMLElement} card @param {string} id */
 function buildAssociationForm(card, id) {
@@ -2226,11 +2220,7 @@ function buildTerminalCard(id, openSection = 'device-details') {
     'Device details',
     'Connection · hardware · account',
   );
-  details.append(
-    el('div', null, 'terminal-summary'),
-    buildAssociationForm(card, id),
-    buildTerminalTools(card),
-  );
+  details.append(el('div', null, 'terminal-summary'), buildAssociationForm(card, id));
   card.append(el('div', null, 'terminal-quick-status'), details, buildDevicesForm(card, id));
   for (const section of card.querySelectorAll('details.terminal-section'))
     if (section instanceof HTMLDetailsElement)

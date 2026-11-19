@@ -161,8 +161,8 @@ execution becomes lost; the server does not automatically execute it again.
 The administration pages show current calls, registrations, terminal reports and
 recent events. Device reports remain distinct from server-observed SIP reachability.
 The server records when it received a report. The selected Terminals card shows
-remote connection/input state, battery percentage and charger connection, plus
-C20 connection/recovery state and confirmed USB power. Older or unsupported fields
+remote connection/input state and battery percentage. A single C10/C20 row shows
+connection or recovery state alongside confirmed USB power. Older or unsupported fields
 show unknown; after 20 seconds without a fresh report, peripheral badges show
 status unavailable. Live badge updates preserve unsaved terminal settings.
 
@@ -423,11 +423,11 @@ also block credential/type changes and account deletion.
 
 On **Accounts**, select a terminal's identifier to open its device card on **Terminals**.
 Terminal selectors show the account name first. **Device details** opens
-first and contains connection, hardware, and call-feature status, account
-association with the full serial number, and **Setup & maintenance**.
+first and contains connection, hardware, and call-feature status
+and account association with the full serial number.
 **Calls**, **Video**, **Audio**, and **General** open one at a time and share
 the sticky **Save changes** bar. Account association has its own submission.
-**Setup** downloads
+The final section, **Setup & maintenance**, includes **Setup**, which downloads
 Wi-Fi/server QR PDFs; **Console** selects the maintenance shell. These QR PDFs
 are runtime provisioning documents, separate from project documentation. App setup
 sheets have two numbered sections: an APK-download QR with a clickable latest-release

@@ -146,7 +146,6 @@ test('terminal drafts retain their original revision and setup downloads propaga
   await form.onsubmit({ preventDefault() {} });
   assert.equal(requests[0].configuration_version, revision);
   assert.equal(requests[0].video_fps, 20);
-  context.buildTerminalTools(card);
   await assert.rejects(
     actions.find(({ text }) => text === 'Download server QR PDF').action(),
     /Download failed/,
@@ -191,9 +190,7 @@ test('terminal hardware details distinguish fresh values, unknowns and stale rep
   assert.deepEqual(render(status), [
     'Remote: Connected',
     'Remote battery: 75%',
-    'Remote charger: Connected',
-    'C10/C20: Connected',
-    'C10/C20 power: On',
+    'C10/C20: Connected · Power on',
   ]);
   assert.deepEqual(
     render({
@@ -203,18 +200,13 @@ test('terminal hardware details distinguish fresh values, unknowns and stale rep
       camera_status: 'off',
       camera_powered: false,
     }),
-    [
-      'Remote: Connected',
-      'Remote battery: 0%',
-      'Remote charger: Not connected',
-      'C10/C20: Powered off',
-      'C10/C20 power: Off',
-    ],
+    ['Remote: Connected', 'Remote battery: 0%', 'C10/C20: Powered off'],
   );
   assert.ok(render(undefined).every((value) => value.endsWith('Unknown')));
   assert.deepEqual(render(status, false), [
     'Remote: Status unavailable',
     'C10/C20: Status unavailable',
   ]);
-  assert.equal(render({ ...status, camera_status: 'waking' })[3], 'C10/C20: Waking');
+  assert.ok(render({ ...status, camera_status: 'waking' }).includes('C10/C20: Waking · Power on'));
+  assert.ok(render({ camera_powered: false }).includes('C10/C20: Powered off'));
 });

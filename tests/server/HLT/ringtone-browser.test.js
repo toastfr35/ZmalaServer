@@ -74,8 +74,9 @@ test(
         .filter({ has: page.getByText(label, { exact: true }) })
         .getByText(value, { exact: true });
     await detail('Remote battery', '75%').waitFor();
-    await detail('Remote charger', 'Connected').waitFor();
-    await detail('C10/C20', 'Connected').waitFor();
+    const charger = page.getByText('Remote charger', { exact: true });
+    assert.equal(await charger.count(), 0);
+    await detail('C10/C20', 'Connected · Power on').waitFor();
     await audioSection.click();
     await page.locator('select[name="c20SpeakerVolume"]').selectOption('75');
     await details.click();
@@ -88,7 +89,7 @@ test(
       camera_connected: false,
     });
     await detail('Remote battery', '31%').waitFor();
-    await detail('Remote charger', 'Not connected').waitFor();
+    assert.equal(await charger.count(), 0);
     await detail('C10/C20', 'Powered off').waitFor();
     await audioSection.click();
     assert.equal(await page.locator('select[name="c20SpeakerVolume"]').inputValue(), '75');

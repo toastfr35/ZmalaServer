@@ -195,12 +195,16 @@ test('admin component fits phones and desktop and preserves modal drafts', async
         );
         assert.deepEqual(
           await page.locator('.terminal-section > summary > span').allTextContents(),
-          ['Device details', 'Calls', 'Video', 'Audio', 'General'],
+          ['Device details', 'Calls', 'Video', 'Audio', 'General', 'Setup & maintenance'],
         );
         assert.equal(
           await page.locator('.terminal-section[open]').getAttribute('data-section'),
           'device-details',
         );
+        const tools = page.locator('.terminal-tools > summary');
+        await tools.press('Enter');
+        await page.getByRole('button', { name: 'Developer access', exact: true }).waitFor();
+        assert.equal(await page.locator('.terminal-section[open]').count(), 1);
         await page.locator('.terminal-audio > summary').click();
         await page.getByLabel('Call volume (%)', { exact: false }).selectOption('65');
         assert.equal(await page.locator('.terminal-save-state').innerText(), 'Unsaved settings');

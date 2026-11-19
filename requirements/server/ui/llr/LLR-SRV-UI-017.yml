@@ -37,15 +37,15 @@ reviewed: null
 scope: Core
 text: |
   Each Terminal account identifier on the Accounts page shall link to its selected device card on the Terminals page. App account identifiers shall remain plain text.
-  The Terminals page shall select one device card and show expandable sections in the order Device details, Calls, Video, Audio and General. Device details shall open initially and group device status, account association and maintenance. Opening one section shall close the previously open section. Settings shall share a single form and retain drafts when switching sections. Account association shall submit separately.
+  The Terminals page shall select one device card and show expandable sections in the order Device details, Calls, Video, Audio, General, and Setup & maintenance. Device details shall open initially and group device status and account association. A filled triangle shall point right for a collapsed section and down for an open section. Opening one section shall close the previously open section. Settings shall share a single form and retain drafts when switching sections. Account association shall submit separately.
   The device selector shall show the account name before its identifier. Connection,
   peripheral and call-feature status shall be visually grouped. A sticky save bar
   shall show whether the terminal settings have unsaved changes.
   C10/C20 speaker volume shall offer 0 through 100 percent in 5-percent steps.
   Existing values between steps shall show the nearest step without changing the
   saved configuration until Save changes is accepted.
-  The selected card shall show remote connection/input state, battery and charger,
-  and C10/C20 connection/recovery state and confirmed power from the latest report.
+  The selected card shall show remote connection/input state and battery percentage.
+  A single C10/C20 row shall show connection/recovery state and confirmed power from the latest report without repeating the power state.
   Missing values shall show unknown. After 20 seconds without a fresh terminal
   report, peripheral details shall show status unavailable rather than old healthy
   readings. Polling shall update status without closing the open section or discarding unsaved settings.
