@@ -652,7 +652,11 @@ unencrypted and sensitive: store it privately. Sessions, registrations, logs,
 bootstrap caches and OS/SSH/TLS configuration are excluded.
 
 `backups.js` serializes all in-memory records before yielding, then reads immutable
-hash-named pictures and referenced private ringtone audio. `backup-format.js` encodes a versioned gzip JSON file map.
+hash-named pictures and referenced private ringtone audio. Export, restore and
+rollback staging check each picture's filename against its contents and validate
+its dimensions. If a local picture fails these checks, restore stops before
+committing the journal and the server resumes normal operation.
+`backup-format.js` encodes a versioned gzip JSON file map.
 SHA-256 checksums detect corruption, not authenticity. Both upload and expanded
 JSON are capped at 64 MiB. Only four state files and up to 1,000 permitted portrait
 and ringtone files combined are accepted. The decoder checks schemas, field limits,

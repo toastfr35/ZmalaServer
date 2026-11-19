@@ -42,6 +42,17 @@ const text = (value, limit = 256) => typeof value === 'string' && value.length <
 /** @param {unknown} value */
 const date = (value) => text(value, 40) && Number.isFinite(Date.parse(String(value)));
 
+/** @param {string} name @param {Buffer} data */
+function fileChecksum(name, data) {
+  const checksum = digest(data);
+  if (PHOTO.test(name)) {
+    const [hash, extension] = name.slice('photos/'.length).split('.');
+    requireValue(hash === checksum, `Picture filename checksum failed for ${name}.`);
+    checkDimensions(data, extension);
+  }
+  return checksum;
+}
+
 // @llr LLR-SRV-BACKUP-004, LLR-SRV-BACKUP-005
 /** Validate every field consumed at startup or by a terminal before staging.
  * @param {Map<string, Buffer>} files */
@@ -225,18 +236,11 @@ async function decodeBackup(bytes) {
     requireValue(typeof entry.data === 'string' && /^[A-Za-z0-9+/]*={0,2}$/.test(entry.data));
     const data = Buffer.from(entry.data, 'base64');
     requireValue(
-      data.toString('base64') === entry.data && digest(data) === entry.sha256,
+      data.toString('base64') === entry.data && fileChecksum(name, data) === entry.sha256,
       'Backup checksum failed.',
     );
     if (SOUND.test(name))
       requireValue(validateSound(data) === name.slice(10, -4), 'Ringtone checksum failed.');
-    if (PHOTO.test(name)) {
-      requireValue(
-        name.split('/')[1].split('.')[0] === digest(data),
-        'Picture filename checksum failed.',
-      );
-      checkDimensions(data, name.split('.').pop() || '');
-    }
     files.set(name, data);
   }
   const state = validateFiles(files);
@@ -252,7 +256,7 @@ async function encodeBackup(files) {
     created_at: new Date().toISOString(),
     files: [...files].map(([name, data]) => ({
       name,
-      sha256: digest(data),
+      sha256: fileChecksum(name, data),
       data: data.toString('base64'),
     })),
   };

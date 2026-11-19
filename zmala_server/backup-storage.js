@@ -21,12 +21,17 @@ function atomicWrite(file, contents) {
   const temporary = file + '.restore-tmp';
   const fd = fs.openSync(temporary, 'w', 0o600);
   try {
-    fs.writeFileSync(fd, contents);
-    fs.fsyncSync(fd);
-  } finally {
-    fs.closeSync(fd);
+    try {
+      fs.writeFileSync(fd, contents);
+      fs.fsyncSync(fd);
+    } finally {
+      fs.closeSync(fd);
+    }
+    fs.renameSync(temporary, file);
+  } catch (error) {
+    fs.rmSync(temporary, { force: true });
+    throw error;
   }
-  fs.renameSync(temporary, file);
   syncDirectory(path.dirname(file));
 }
 /** Only immutable regular images are read. Bound memory before reading each file.
