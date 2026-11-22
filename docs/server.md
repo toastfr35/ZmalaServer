@@ -248,6 +248,14 @@ Use the [local package command](general.md#packages-and-release-guides) on a
 clean checkout. The archive identifies
 its commit and version in ZMALA-COMPONENT.json and lists payload checksums.
 
+## Combined appliance setup
+
+After the activation QR is scanned on the terminal, its Server Configuration
+page displays the LAN administration address. Use a browser on the same LAN
+to set the first password and manage accounts. After configuring secure relay,
+select Test with a phone on the TV and scan the temporary QR using mobile data.
+The TV reports HTTPS receipt separately from manual confirmation of a media call.
+
 ## Developer access to a remote terminal
 
 In **Terminals → Developer access**, enable access for one enrolled terminal.
