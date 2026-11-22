@@ -1,0 +1,22 @@
+active: true
+area: Configuration
+derived: false
+header: Combined server public access check
+level: 26.0
+links:
+- HLR-SRV-CONFIG-014: null
+normative: true
+ref: ''
+references:
+- path: zmala_server/http/handler.js
+  type: file
+- path: zmala_server/public-access-check.js
+  type: file
+- path: tests/server/LLT/public-access-check.test.js
+  type: file
+reviewed: null
+scope: Core
+text: |
+  On an activated combined appliance, the server shall offer its assigned local terminal a LAN administration address and a five-minute, single-use challenge for the configured public HTTPS origin. Only an incoming request to that origin from outside the administration network with the current challenge shall confirm device access. Creating another challenge invalidates the previous one. These routes shall confer no administrator session.
+verification: |
+  Exercise enrollment authorization, expiry, replacement, origin and local peer restrictions, and replay. Check the success time and the unconfigured state.

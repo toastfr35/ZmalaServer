@@ -41,6 +41,8 @@ const serverVersion = readServerVersion();
 /** @param {import('../types/http').HttpContext} context */
 function createHandler(context) {
   const { store } = context;
+  const { PublicAccessCheck, accessRoute } = require('../public-access-check');
+  const accessCheck = process.env.ZMALA_COMBINED_SERVER === '1' ? new PublicAccessCheck() : null;
   const v = store.value;
   const photos = new PhotoStore(store.dir);
   /** @param {import('node:http').IncomingMessage} req
@@ -110,6 +112,19 @@ function createHandler(context) {
         deviceId,
         terminalUpdates: context.terminalUpdates,
       };
+      if (
+        accessCheck &&
+        (await accessRoute(
+          req,
+          res,
+          url,
+          accessCheck,
+          store,
+          !!deviceId && deviceId === v.local_terminal_id && !!store.terminalAccount(deviceId),
+          onAdminNetwork,
+        ))
+      )
+        return;
       if (await deviceRoutes(req, res, url, identity)) return;
       // @llr LLR-SRV-CONFIG-024
       const sound = url.pathname.match(/^\/api\/ringtones\/(nokia|[a-f0-9]{64})\.wav$/);
